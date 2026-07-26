@@ -1,0 +1,9 @@
+# Normalize all text files to LF in the repository regardless of contributor
+# OS — prevents CRLF churn in diffs between Windows and Unix machines.
+* text=auto eol=lf
+
+# Binary assets: never touch line endings.
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

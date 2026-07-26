@@ -1,0 +1,51 @@
+# Local development stack.
+#
+#   docker compose up -d postgres redis   # infrastructure only (typical dev loop:
+#                                         # run api/frontend natively for hot reload)
+#   docker compose up --build             # full containerized stack
+#
+# The worker service is added in Milestone 5 alongside the execution engine.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: dispatch
+      POSTGRES_PASSWORD: dispatch
+      POSTGRES_DB: dispatch
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dispatch -d dispatch"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DISPATCH_ENVIRONMENT: development
+      DISPATCH_DATABASE_URL: postgresql+asyncpg://dispatch:dispatch@postgres:5432/dispatch
+      DISPATCH_REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

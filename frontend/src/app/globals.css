@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+
+  --color-canvas: #f7f5f2;
+  --color-surface: #ffffff;
+  --color-ink: #111111;
+  --color-muted: #5b5b5b;
+  --color-faint: #8f8a80;
+  --color-primary: #1f4d3a;
+  --color-primary-hover: #163a2c;
+  --color-accent: #c89b3c;
+  --color-line: #e8e5df;
+  --color-success: #2e7d5b;
+  --color-danger: #c14444;
+
+  --shadow-card: 0 1px 2px rgb(17 17 17 / 0.04),
+    0 8px 24px -12px rgb(17 17 17 / 0.08);
+  --shadow-raised: 0 1px 2px rgb(17 17 17 / 0.05),
+    0 16px 48px -16px rgb(17 17 17 / 0.14);
+  --shadow-pop: 0 2px 4px rgb(17 17 17 / 0.05),
+    0 24px 64px -20px rgb(17 17 17 / 0.22);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(31 77 58 / 0.14);
+}
+
+/* Slim, quiet scrollbars for panel areas */
+.quiet-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.quiet-scroll::-webkit-scrollbar-thumb {
+  background: #ddd9d1;
+  border-radius: 999px;
+}
+.quiet-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes caret-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  95% {
+    opacity: 0;
+  }
+}
+.caret-blink {
+  animation: caret-blink 1.1s steps(1) infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+}
+.pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}

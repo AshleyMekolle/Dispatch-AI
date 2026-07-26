@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dispatch
 
-## Getting Started
+AI-assisted workflow automation. Describe business work in plain English —
+Dispatch generates a structured plan, waits for your approval, executes each
+step across your business apps, and records every state transition.
 
-First, run the development server:
+**The AI only writes the plan. The workflow engine is the product**: approval
+gates, a persisted step lifecycle, retries, cancellation, and a searchable
+execution history are all deterministic engineering.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Repository layout
+
+```
+dispatch/
+├── frontend/   Next.js 15 + React 19 + Tailwind v4 (product UI)
+├── backend/    FastAPI + SQLAlchemy + Pydantic v2 (API + domain)
+├── worker/     Background execution entrypoint (ARQ) — Milestone 5
+├── shared/     Cross-runtime artifacts (generated API types)
+├── docs/       Architecture, ADRs, ERD, sequence diagrams
+├── scripts/    Developer tooling
+└── .github/    CI (lint, format, types, tests, build)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quickstart
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Prerequisites: Node 22+, Python 3.13+, Docker.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# Infrastructure (PostgreSQL 17 + Redis 8)
+docker compose up -d postgres redis
 
-## Learn More
+# Backend
+cd backend
+python -m venv .venv && source .venv/bin/activate   # .venv\Scripts\activate on Windows
+pip install -e . --group dev
+cp .env.example .env
+uvicorn app.main:create_app --factory --reload                        # http://localhost:8000/docs
 
-To learn more about Next.js, take a look at the following resources:
+# Frontend
+cd frontend
+npm install
+npm run dev                                          # http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Development commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Task            | Backend (`backend/`)      | Frontend (`frontend/`) |
+| --------------- | ------------------------- | ---------------------- |
+| Run dev server  | `uvicorn app.main:create_app --factory --reload` | `npm run dev`    |
+| Tests           | `pytest`                  | `npm test` *(M7)*      |
+| Lint            | `ruff check .`            | `npm run lint`         |
+| Format          | `ruff format .`           | `npx prettier -w .`    |
 
-## Deploy on Vercel
+## Documentation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- [Architecture & decision records](docs/architecture.md)
+- API reference: interactive OpenAPI docs at `/docs` when the backend runs
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Status
+
+Built milestone-by-milestone; each milestone lands green (lint + tests + build).
+
+- [x] **M1** — Monorepo, FastAPI foundation (config validation, structured logging, request correlation, health probes), Docker Compose, CI
+- [ ] **M2** — Data layer: SQLAlchemy models, Alembic migrations, repositories
+- [ ] **M3** — Auth: JWT + rotating refresh tokens, rate limiting
+- [ ] **M4** — AI plan generation (strict Pydantic validation) + workflow API
+- [ ] **M5** — Execution engine: ARQ worker, step lifecycle, integration adapters (Drive, Gmail, Slack)
+- [ ] **M6** — Frontend integration: React Query, real APIs end-to-end
+- [ ] **M7** — Test hardening (80%+ backend coverage, Playwright E2E), full docs
