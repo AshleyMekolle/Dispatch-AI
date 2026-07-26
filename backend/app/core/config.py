@@ -24,6 +24,11 @@ Environment = Literal["development", "test", "production"]
 # deliberately configured one. Never acceptable outside development/test.
 _INSECURE_DEFAULT_SECRET = "insecure-dev-secret-change-me"
 
+# A real (but published, hence insecure) Fernet key so `docker compose up` works
+# with zero setup in development. Generate a real one with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+_INSECURE_DEFAULT_ENCRYPTION_KEY = "8FGZyZ3h7izzCOVjpzIKT1Mf5MeDK2_5UszUT5J-TXQ="
+
 
 class Settings(BaseSettings):
     """All runtime configuration for the Dispatch API, sourced from the environment.
@@ -67,6 +72,16 @@ class Settings(BaseSettings):
         description="Origins allowed to call the API from a browser.",
     )
 
+    # --- Field-level credential encryption ---------------------------------
+    # Ordered newest-first. Encryption always uses the first key; decryption
+    # tries each in turn, which is what makes key rotation possible: prepend
+    # a new key, redeploy, and old ciphertext still decrypts. See
+    # app/core/crypto.py and docs/adr/0008-encrypted-credentials.md.
+    encryption_keys: list[str] = Field(
+        default=[_INSECURE_DEFAULT_ENCRYPTION_KEY],
+        description="Fernet keys for encrypting OAuth credentials at rest, newest first.",
+    )
+
     # --- Observability ----------------------------------------------------
     log_level: str = "INFO"
     log_json: bool | None = Field(
@@ -84,6 +99,12 @@ class Settings(BaseSettings):
         if self.environment == "production" and self.secret_key == _INSECURE_DEFAULT_SECRET:
             raise ValueError(
                 "DISPATCH_SECRET_KEY must be set to a strong random value in production."
+            )
+        insecure_key_in_use = _INSECURE_DEFAULT_ENCRYPTION_KEY in self.encryption_keys
+        if self.environment == "production" and insecure_key_in_use:
+            raise ValueError(
+                "DISPATCH_ENCRYPTION_KEYS must not contain the published development key "
+                "in production — every OAuth credential encrypted with it is compromised."
             )
         return self
 
