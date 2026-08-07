@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Download, Search } from "lucide-react";
+import { Download } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
-import { Badge, Button, Card, StatusDot } from "@/components/ui";
+import { Badge, Button, Card, SearchInput, StatusDot, Tabs } from "@/components/ui";
 import { AppStack } from "@/components/app-icon";
 import { EXECUTIONS } from "@/lib/data";
 
@@ -28,28 +28,8 @@ export default function HistoryPage() {
       />
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex rounded-lg border border-line bg-surface p-0.5 shadow-[0_1px_2px_rgb(17_17_17/0.03)]">
-          {TABS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`cursor-pointer rounded-[7px] px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
-                tab === t
-                  ? "bg-ink text-white"
-                  : "text-muted hover:text-ink"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-        <div className="flex h-9 w-64 items-center gap-2 rounded-lg border border-line bg-surface px-3">
-          <Search className="size-4 text-faint" />
-          <input
-            placeholder="Search executions…"
-            className="w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-faint"
-          />
-        </div>
+        <Tabs options={TABS} value={tab} onChange={setTab} />
+        <SearchInput placeholder="Search executions…" className="w-64" />
       </div>
 
       <Card className="overflow-hidden">

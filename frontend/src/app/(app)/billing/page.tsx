@@ -1,6 +1,6 @@
 import { CreditCard, Download } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button, Card, Progress } from "@/components/ui";
 
 const INVOICES = [
   { id: "INV-2026-007", date: "Jul 1, 2026", amount: "$632.00", status: "Paid" },
@@ -60,9 +60,7 @@ export default function BillingPage() {
                 <span className="text-faint"> / 1,000</span>
               </span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-ink/[0.05]">
-              <div className="h-full w-[64%] rounded-full bg-primary" />
-            </div>
+            <Progress value={642} max={1000} />
             <p className="mt-2 text-xs text-faint">
               Resets in 14 days. Overage runs are billed at $0.08 each.
             </p>

@@ -13,6 +13,7 @@ import {
   Settings,
   Plus,
   ChevronsUpDown,
+  X,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 
@@ -33,15 +34,18 @@ const NAV_SECONDARY = [
 function NavItem({
   item,
   active,
+  onClick,
 }: {
   item: { label: string; href: string; icon: React.ElementType };
   active: boolean;
+  onClick?: () => void;
 }) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
-      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] font-medium transition-colors ${
+      onClick={onClick}
+      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 ${
         active
           ? "bg-surface text-ink shadow-[0_1px_2px_rgb(17_17_17/0.06)] ring-1 ring-line"
           : "text-muted hover:bg-ink/[0.04] hover:text-ink"
@@ -56,19 +60,34 @@ function NavItem({
   );
 }
 
-export function Sidebar() {
+export function Sidebar({
+  onNavigate,
+  onClose,
+}: {
+  onNavigate?: () => void;
+  onClose?: () => void;
+} = {}) {
   const pathname = usePathname();
 
   return (
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-line bg-canvas">
-      <div className="px-4 pt-5 pb-4">
+      <div className="flex items-center justify-between px-4 pt-5 pb-4">
         <Logo href="/dashboard" />
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="inline-flex size-7 cursor-pointer items-center justify-center rounded-lg text-faint transition-colors hover:bg-ink/[0.04] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
 
       <div className="px-3 pb-4">
         <Link
           href="/automations"
-          className="flex h-9 items-center justify-center gap-2 rounded-lg bg-primary text-[13.5px] font-medium text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.08)] transition-colors hover:bg-primary-hover"
+          onClick={onNavigate}
+          className="flex h-9 items-center justify-center gap-2 rounded-lg bg-primary text-[13.5px] font-medium text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.08)] transition-colors hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
         >
           <Plus className="size-4" />
           New automation
@@ -81,6 +100,7 @@ export function Sidebar() {
             key={item.href}
             item={item}
             active={pathname.startsWith(item.href)}
+            onClick={onNavigate}
           />
         ))}
         <div className="!my-3 h-px bg-line/80" />
@@ -89,12 +109,13 @@ export function Sidebar() {
             key={item.href}
             item={item}
             active={pathname.startsWith(item.href)}
+            onClick={onNavigate}
           />
         ))}
       </nav>
 
       <div className="border-t border-line p-3">
-        <button className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-ink/[0.04]">
+        <button className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-ink/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35">
           <span className="flex size-8 items-center justify-center rounded-full bg-primary text-[12px] font-semibold text-white">
             AC
           </span>

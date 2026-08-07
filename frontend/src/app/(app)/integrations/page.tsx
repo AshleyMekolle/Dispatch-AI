@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, Plus } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
-import { Badge, Card } from "@/components/ui";
+import { Badge, Button, Card } from "@/components/ui";
 import { AppIcon } from "@/components/app-icon";
 import { ALL_APPS } from "@/lib/data";
 
@@ -52,23 +52,24 @@ export default function IntegrationsPage() {
               </p>
               <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
                 <span className="text-xs text-faint">{a.category}</span>
-                <button
-                  onClick={() => toggle(a.app)}
-                  className={`cursor-pointer rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors ${
-                    isConnected
-                      ? "text-muted hover:bg-danger/[0.06] hover:text-danger"
-                      : "border border-line bg-surface text-ink shadow-[0_1px_2px_rgb(17_17_17/0.04)] hover:bg-canvas"
-                  }`}
-                >
-                  {isConnected ? (
-                    "Disconnect"
-                  ) : (
-                    <span className="flex items-center gap-1.5">
-                      <Plus className="size-3.5" />
-                      Connect
-                    </span>
-                  )}
-                </button>
+                {isConnected ? (
+                  <Button
+                    variant="danger-ghost"
+                    size="sm"
+                    onClick={() => toggle(a.app)}
+                  >
+                    Disconnect
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => toggle(a.app)}
+                  >
+                    <Plus className="size-3.5" />
+                    Connect
+                  </Button>
+                )}
               </div>
             </Card>
           );

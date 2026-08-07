@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUp,
@@ -9,14 +9,13 @@ import {
   Loader2,
   Pencil,
   Plus,
-  Search,
   ShieldCheck,
   Sparkles,
   X,
 } from "lucide-react";
 import { AppIcon } from "@/components/app-icon";
 import { LogoMark } from "@/components/logo";
-import { Badge } from "@/components/ui";
+import { Badge, SearchInput } from "@/components/ui";
 import { CONVERSATIONS, ONBOARDING_PLAN, type StepStatus } from "@/lib/data";
 
 const PROMPT =
@@ -82,13 +81,7 @@ export function Workspace() {
           </button>
         </div>
         <div className="px-3 pb-3">
-          <div className="flex h-8 items-center gap-2 rounded-lg border border-line bg-surface px-2.5">
-            <Search className="size-3.5 text-faint" />
-            <input
-              placeholder="Search…"
-              className="w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-faint"
-            />
-          </div>
+          <SearchInput inputSize="sm" placeholder="Search…" />
         </div>
         <div className="quiet-scroll flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
           {CONVERSATIONS.map((c) => (

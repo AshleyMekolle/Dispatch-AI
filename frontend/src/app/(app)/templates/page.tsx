@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Play, Plus } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
-import { Button, Card } from "@/components/ui";
+import { Badge, Button, Card, Tabs } from "@/components/ui";
 import { AppStack } from "@/components/app-icon";
 import { TEMPLATES } from "@/lib/data";
 
@@ -35,21 +35,13 @@ export default function TemplatesPage() {
         }
       />
 
-      <div className="mb-6 flex flex-wrap gap-2">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCat(c)}
-            className={`cursor-pointer rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors ${
-              cat === c
-                ? "bg-ink text-white"
-                : "border border-line bg-surface text-muted hover:text-ink"
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        options={CATEGORIES}
+        value={cat}
+        onChange={setCat}
+        variant="chips"
+        className="mb-6"
+      />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((t) => (
@@ -59,9 +51,7 @@ export default function TemplatesPage() {
           >
             <div className="mb-4 flex items-center justify-between">
               <AppStack apps={t.apps} />
-              <span className="rounded-full bg-ink/[0.04] px-2.5 py-1 text-[11px] font-medium text-muted">
-                {t.category}
-              </span>
+              <Badge tone="neutral">{t.category}</Badge>
             </div>
             <h3 className="text-[15px] font-semibold tracking-tight text-ink">
               {t.name}
