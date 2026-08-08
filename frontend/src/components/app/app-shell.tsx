@@ -4,14 +4,21 @@ import { useState } from "react";
 import { Menu } from "lucide-react";
 import { Sidebar } from "@/components/app/sidebar";
 import { LogoMark } from "@/components/logo";
+import type { SessionUser } from "@/lib/session";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  user,
+  children,
+}: {
+  user: SessionUser;
+  children: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-canvas">
       <div className="hidden lg:flex">
-        <Sidebar />
+        <Sidebar user={user} />
       </div>
 
       {open && (
@@ -26,6 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-hidden={!open}
       >
         <Sidebar
+          user={user}
           onNavigate={() => setOpen(false)}
           onClose={() => setOpen(false)}
         />

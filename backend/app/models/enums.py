@@ -22,6 +22,8 @@ class IntegrationProvider(enum.StrEnum):
     GOOGLE_DRIVE = "GOOGLE_DRIVE"
     GMAIL = "GMAIL"
     SLACK = "SLACK"
+    GOOGLE_CALENDAR = "GOOGLE_CALENDAR"
+    NOTION = "NOTION"
 
 
 class WorkflowVersionStatus(enum.StrEnum):

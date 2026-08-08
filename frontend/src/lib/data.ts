@@ -15,23 +15,6 @@ export const ALL_APPS: { app: AppName; category: string; connected: boolean; des
   { app: "Salesforce", category: "CRM", connected: false, description: "Manage leads, opportunities, and accounts." },
 ];
 
-export type StepStatus = "pending" | "running" | "done" | "failed";
-
-export type PlanStep = {
-  action: string;
-  detail: string;
-  app: AppName;
-  duration: string;
-};
-
-export const ONBOARDING_PLAN: PlanStep[] = [
-  { action: "Create HubSpot contact", detail: "John Smith · john@acmecorp.com · tagged “New Client”", app: "HubSpot", duration: "~2s" },
-  { action: "Create Drive folder", detail: "“Acme Corp — Onboarding” inside /Clients, shared with team", app: "Google Drive", duration: "~3s" },
-  { action: "Send welcome email", detail: "Template “Client Welcome” personalized for John", app: "Gmail", duration: "~2s" },
-  { action: "Notify sales team", detail: "Post summary in #sales with links to contact + folder", app: "Slack", duration: "~1s" },
-  { action: "Schedule follow-up", detail: "30 min “Kickoff check-in”, Friday Jul 24 · 10:00 AM", app: "Google Calendar", duration: "~2s" },
-];
-
 export type Execution = {
   id: string;
   name: string;
@@ -97,19 +80,4 @@ export const SUGGESTIONS: Suggestion[] = [
   { text: "You sent 9 similar follow-up emails this week. Turn them into a reusable workflow?", action: "Create workflow" },
   { text: "3 HubSpot deals moved to “Closed won” with no onboarding started. Run Client Onboarding?", action: "Review deals" },
   { text: "Your Friday report took 40 minutes manually last week. Schedule it for Mondays?", action: "Schedule it" },
-];
-
-export type Conversation = {
-  title: string;
-  when: string;
-  active: boolean;
-};
-
-export const CONVERSATIONS: Conversation[] = [
-  { title: "Onboard John Smith — Acme Corp", when: "2:41 PM", active: true },
-  { title: "Follow up with overdue customers", when: "9:14 AM", active: false },
-  { title: "Prep weekly pipeline report", when: "Yesterday", active: false },
-  { title: "Route new Meridian Group lead", when: "Friday", active: false },
-  { title: "Draft renewal emails — Q3 contracts", when: "Thursday", active: false },
-  { title: "Onboard new hire Tolu Okafor", when: "Jul 10", active: false },
 ];

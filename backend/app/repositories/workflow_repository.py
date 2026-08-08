@@ -37,7 +37,9 @@ class WorkflowRepository:
     async def create_workflow(
         self, *, organization_id: uuid.UUID, owner_user_id: uuid.UUID | None, title: str
     ) -> Workflow:
-        workflow = Workflow(organization_id=organization_id, owner_user_id=owner_user_id, title=title)
+        workflow = Workflow(
+            organization_id=organization_id, owner_user_id=owner_user_id, title=title
+        )
         self._session.add(workflow)
         await self._session.flush()
         return workflow

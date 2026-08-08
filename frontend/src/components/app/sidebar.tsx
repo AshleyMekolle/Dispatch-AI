@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Workflow,
@@ -13,9 +14,11 @@ import {
   Settings,
   Plus,
   ChevronsUpDown,
+  LogOut,
   X,
 } from "lucide-react";
 import { Logo } from "@/components/logo";
+import type { SessionUser } from "@/lib/session";
 
 const NAV = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -60,13 +63,75 @@ function NavItem({
   );
 }
 
+function initialsFor(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join("");
+}
+
+function UserMenu({ user }: { user: SessionUser }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
+  return (
+    <div className="relative">
+      {open && (
+        <button
+          aria-label="Close menu"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-40 cursor-default"
+        />
+      )}
+      {open && (
+        <div className="absolute bottom-full left-0 z-50 mb-2 w-full rounded-lg border border-line bg-surface p-1.5 shadow-raised">
+          <p className="truncate px-2 py-1.5 text-[12px] text-faint">{user.email}</p>
+          <button
+            onClick={handleLogout}
+            className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium text-ink transition-colors hover:bg-danger/[0.06] hover:text-danger"
+          >
+            <LogOut className="size-3.5" />
+            Log out
+          </button>
+        </div>
+      )}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="relative z-50 flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-ink/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+      >
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary text-[12px] font-semibold text-white">
+          {initialsFor(user.fullName)}
+        </span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-[13px] font-medium text-ink">
+            {user.fullName}
+          </span>
+          <span className="block truncate text-[11.5px] text-faint">
+            {user.organizationName}
+          </span>
+        </span>
+        <ChevronsUpDown className="size-3.5 text-faint" />
+      </button>
+    </div>
+  );
+}
+
 export function Sidebar({
+  user,
   onNavigate,
   onClose,
 }: {
+  user: SessionUser;
   onNavigate?: () => void;
   onClose?: () => void;
-} = {}) {
+}) {
   const pathname = usePathname();
 
   return (
@@ -115,20 +180,7 @@ export function Sidebar({
       </nav>
 
       <div className="border-t border-line p-3">
-        <button className="flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-ink/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35">
-          <span className="flex size-8 items-center justify-center rounded-full bg-primary text-[12px] font-semibold text-white">
-            AC
-          </span>
-          <span className="min-w-0 flex-1 text-left">
-            <span className="block truncate text-[13px] font-medium text-ink">
-              Amara Cole
-            </span>
-            <span className="block truncate text-[11.5px] text-faint">
-              Halcyon Partners
-            </span>
-          </span>
-          <ChevronsUpDown className="size-3.5 text-faint" />
-        </button>
+        <UserMenu user={user} />
       </div>
     </aside>
   );

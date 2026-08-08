@@ -28,10 +28,10 @@ export function Nav() {
           </nav>
         </div>
         <div className="flex items-center gap-2.5">
-          <Button href="/dashboard" variant="ghost" size="md">
+          <Button href="/login" variant="ghost" size="md">
             Sign in
           </Button>
-          <Button href="/dashboard" size="md">
+          <Button href="/signup" size="md">
             Start Free
           </Button>
         </div>

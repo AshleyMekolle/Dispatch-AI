@@ -23,6 +23,7 @@ def test_production_accepts_explicit_secret_and_logs_json() -> None:
     s = Settings(
         environment="production",
         secret_key="a-real-secret-from-the-vault",
+        encryption_keys=["a-real-fernet-key-from-the-vault"],
         _env_file=None,
     )
     assert s.logs_as_json is True

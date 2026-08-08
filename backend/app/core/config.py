@@ -65,6 +65,7 @@ class Settings(BaseSettings):
         default=_INSECURE_DEFAULT_SECRET,
         description="HMAC signing key for JWTs. MUST be overridden in production.",
     )
+    algorithm: str = "HS256"
     access_token_ttl_seconds: int = 60 * 15
     refresh_token_ttl_seconds: int = 60 * 60 * 24 * 14
     cors_origins: list[str] = Field(

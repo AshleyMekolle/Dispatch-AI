@@ -29,7 +29,9 @@ class RefreshTokenRepository:
         )
         return result.scalar_one_or_none()
 
-    async def rotate(self, token: RefreshToken, *, new_token_hash: str, expires_at: datetime) -> RefreshToken:
+    async def rotate(
+        self, token: RefreshToken, *, new_token_hash: str, expires_at: datetime
+    ) -> RefreshToken:
         """Revoke ``token`` and issue its successor, linked via
         ``replaced_by_id`` — the chain that lets reuse of a revoked token be
         detected later.
@@ -41,6 +43,10 @@ class RefreshTokenRepository:
         token.replaced_by_id = replacement.id
         await self._session.flush()
         return replacement
+
+    async def revoke(self, token: RefreshToken) -> None:
+        token.revoked_at = datetime.now(UTC)
+        await self._session.flush()
 
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
         result = await self._session.execute(

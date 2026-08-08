@@ -111,7 +111,7 @@ export default function Home() {
             apps and completes the work in seconds.
           </p>
           <div className="mt-9 flex items-center justify-center gap-3">
-            <Button href="/dashboard" size="lg">
+            <Button href="/signup" size="lg">
               Start Free
               <ArrowRight className="size-4" />
             </Button>
@@ -357,7 +357,7 @@ export default function Home() {
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Link
-              href="/dashboard"
+              href="/signup"
               className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-5 text-[15px] font-medium text-primary transition-colors hover:bg-white/90"
             >
               Start Free
