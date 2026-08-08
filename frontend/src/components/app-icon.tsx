@@ -1,3 +1,15 @@
+import {
+  siGmail,
+  siGoogledrive,
+  siGooglecalendar,
+  siGooglesheets,
+  siNotion,
+  siHubspot,
+  siAirtable,
+  siStripe,
+  siWhatsapp,
+} from "simple-icons";
+
 export type AppName =
   | "Gmail"
   | "Google Drive"
@@ -12,19 +24,42 @@ export type AppName =
   | "Stripe"
   | "Salesforce";
 
-const APP_STYLES: Record<AppName, { bg: string; fg: string; glyph: string }> = {
-  Gmail: { bg: "#FBEAE7", fg: "#C5352B", glyph: "Gm" },
-  "Google Drive": { bg: "#E7F1E9", fg: "#1E8E3E", glyph: "Dr" },
-  "Google Calendar": { bg: "#E8F0FB", fg: "#1A73E8", glyph: "Ca" },
-  "Google Sheets": { bg: "#E4F2EA", fg: "#188038", glyph: "Sh" },
-  Slack: { bg: "#F3EAF3", fg: "#611F69", glyph: "Sl" },
-  Notion: { bg: "#F1F0EE", fg: "#191919", glyph: "N" },
-  HubSpot: { bg: "#FDEEE9", fg: "#E8593C", glyph: "H" },
-  Airtable: { bg: "#FDF3DC", fg: "#B58121", glyph: "A" },
-  "Microsoft 365": { bg: "#FBEBe6", fg: "#D83B01", glyph: "Ms" },
-  WhatsApp: { bg: "#E7F6EC", fg: "#1FA855", glyph: "W" },
-  Stripe: { bg: "#EDEDFB", fg: "#5851DF", glyph: "St" },
-  Salesforce: { bg: "#E6F3FA", fg: "#0A8AC2", glyph: "Sf" },
+type IconDef =
+  | { kind: "logo"; path: string; hex: string }
+  | { kind: "monogram"; glyph: string; hex: string };
+
+const APP_ICONS: Record<AppName, IconDef> = {
+  Gmail: { kind: "logo", path: siGmail.path, hex: siGmail.hex },
+  "Google Drive": {
+    kind: "logo",
+    path: siGoogledrive.path,
+    hex: siGoogledrive.hex,
+  },
+  "Google Calendar": {
+    kind: "logo",
+    path: siGooglecalendar.path,
+    hex: siGooglecalendar.hex,
+  },
+  "Google Sheets": {
+    kind: "logo",
+    path: siGooglesheets.path,
+    hex: siGooglesheets.hex,
+  },
+  Slack: { kind: "monogram", glyph: "Sl", hex: "611F69" },
+  Notion: { kind: "logo", path: siNotion.path, hex: siNotion.hex },
+  HubSpot: { kind: "logo", path: siHubspot.path, hex: siHubspot.hex },
+  Airtable: { kind: "logo", path: siAirtable.path, hex: siAirtable.hex },
+  "Microsoft 365": { kind: "monogram", glyph: "Ms", hex: "D83B01" },
+  WhatsApp: { kind: "logo", path: siWhatsapp.path, hex: siWhatsapp.hex },
+  Stripe: { kind: "logo", path: siStripe.path, hex: siStripe.hex },
+  Salesforce: { kind: "monogram", glyph: "Sf", hex: "0A8AC2" },
+};
+
+const DIMENSIONS = {
+  xs: { box: "size-4.5 rounded-[5px]", glyph: "text-[9px]", logo: "size-[62%]" },
+  sm: { box: "size-6 rounded-md", glyph: "text-[11px]", logo: "size-[58%]" },
+  md: { box: "size-8 rounded-lg", glyph: "text-[13px]", logo: "size-[55%]" },
+  lg: { box: "size-10 rounded-xl", glyph: "text-[15px]", logo: "size-[55%]" },
 };
 
 export function AppIcon({
@@ -34,20 +69,23 @@ export function AppIcon({
   app: AppName;
   size?: "xs" | "sm" | "md" | "lg";
 }) {
-  const s = APP_STYLES[app];
-  const dims = {
-    xs: "size-4.5 rounded-[5px] text-[9px]",
-    sm: "size-6 rounded-md text-[11px]",
-    md: "size-8 rounded-lg text-[13px]",
-    lg: "size-10 rounded-xl text-[15px]",
-  };
+  const icon = APP_ICONS[app];
+  const dim = DIMENSIONS[size];
   return (
     <span
       title={app}
-      className={`inline-flex shrink-0 items-center justify-center font-bold tracking-tight ${dims[size]}`}
-      style={{ backgroundColor: s.bg, color: s.fg }}
+      className={`inline-flex shrink-0 items-center justify-center ${dim.box}`}
+      style={{ backgroundColor: `#${icon.hex}1A`, color: `#${icon.hex}` }}
     >
-      {s.glyph}
+      {icon.kind === "logo" ? (
+        <svg viewBox="0 0 24 24" fill="currentColor" className={dim.logo}>
+          <path d={icon.path} />
+        </svg>
+      ) : (
+        <span className={`font-bold tracking-tight ${dim.glyph}`}>
+          {icon.glyph}
+        </span>
+      )}
     </span>
   );
 }

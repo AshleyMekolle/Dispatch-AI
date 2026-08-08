@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import {
   MessageSquareText,
@@ -9,6 +10,7 @@ import {
   Blocks,
   Sparkles,
   ArrowRight,
+  Zap,
 } from "lucide-react";
 import { Nav } from "@/components/landing/nav";
 import { HeroDemo } from "@/components/landing/hero-demo";
@@ -26,14 +28,14 @@ const FEATURES = [
     text: "Describe the work in plain English. No drag-and-drop builders, no flowcharts, no training.",
   },
   {
-    icon: ListChecks,
-    title: "AI execution preview",
-    text: "Dispatch turns your request into a precise plan — every action, app, and estimated duration.",
-  },
-  {
     icon: ShieldCheck,
     title: "Approval before execution",
     text: "Nothing runs until you say so. Review, edit, or remove any step before it touches your tools.",
+  },
+  {
+    icon: ListChecks,
+    title: "AI execution preview",
+    text: "Dispatch turns your request into a precise plan — every action, app, and estimated duration.",
   },
   {
     icon: Activity,
@@ -62,13 +64,25 @@ const FEATURES = [
   },
 ];
 
-const COMPANIES = [
-  "Halcyon Partners",
-  "Meridian Group",
-  "Fieldstone Realty",
-  "Arcadia Search",
-  "Coastline Media",
-  "Beacon & Co",
+const STEPS = [
+  {
+    n: "01",
+    icon: MessageSquareText,
+    title: "Describe",
+    text: "Type what you need done, the way you'd tell a capable colleague. Dispatch understands your apps, your data, and your intent.",
+  },
+  {
+    n: "02",
+    icon: ListChecks,
+    title: "Review",
+    text: "Dispatch generates a step-by-step execution plan. Check every action, edit anything, and approve when it's right.",
+  },
+  {
+    n: "03",
+    icon: Zap,
+    title: "Execute",
+    text: "Dispatch carries out the work across your connected apps and shows you a live timeline as each step completes.",
+  },
 ];
 
 export default function Home() {
@@ -115,25 +129,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ————— Logo row ————— */}
-      <section className="border-y border-line/70 bg-surface/60 py-10">
-        <div className="mx-auto max-w-6xl px-6">
-          <p className="mb-6 text-center text-xs font-semibold tracking-[0.14em] text-faint uppercase">
-            Trusted by operations teams at
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-4">
-            {COMPANIES.map((c) => (
-              <span
-                key={c}
-                className="text-[15px] font-semibold tracking-tight text-ink/35"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ————— How it works ————— */}
       <section id="product" className="py-24">
         <div className="mx-auto max-w-6xl px-6">
@@ -145,38 +140,31 @@ export default function Home() {
               From sentence to finished work in three steps
             </h2>
           </div>
-          <div className="grid gap-5 md:grid-cols-3">
-            {[
-              {
-                n: "01",
-                title: "Describe",
-                text: "Type what you need done, the way you'd tell a capable colleague. Dispatch understands your apps, your data, and your intent.",
-              },
-              {
-                n: "02",
-                title: "Review",
-                text: "Dispatch generates a step-by-step execution plan. Check every action, edit anything, and approve when it's right.",
-              },
-              {
-                n: "03",
-                title: "Execute",
-                text: "Dispatch carries out the work across your connected apps and shows you a live timeline as each step completes.",
-              },
-            ].map((s) => (
-              <div
-                key={s.n}
-                className="rounded-2xl border border-line bg-surface p-7 shadow-card"
-              >
-                <span className="text-[13px] font-semibold tracking-wide text-accent">
-                  {s.n}
-                </span>
-                <h3 className="mt-3 text-lg font-semibold tracking-tight text-ink">
-                  {s.title}
-                </h3>
-                <p className="mt-2 text-[14.5px] leading-relaxed text-muted">
-                  {s.text}
-                </p>
-              </div>
+          <div className="flex flex-col gap-5 md:flex-row md:items-stretch md:gap-4">
+            {STEPS.map((s, i) => (
+              <Fragment key={s.n}>
+                <div className="flex-1 rounded-2xl border border-line bg-surface p-7 shadow-card">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary/[0.07] text-primary">
+                      <s.icon className="size-[18px]" strokeWidth={1.8} />
+                    </span>
+                    <span className="text-[13px] font-semibold tracking-wide text-accent">
+                      {s.n}
+                    </span>
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold tracking-tight text-ink">
+                    {s.title}
+                  </h3>
+                  <p className="mt-2 text-[14.5px] leading-relaxed text-muted">
+                    {s.text}
+                  </p>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className="hidden shrink-0 items-center justify-center text-line md:flex">
+                    <ArrowRight className="size-5" />
+                  </div>
+                )}
+              </Fragment>
             ))}
           </div>
         </div>
@@ -227,8 +215,26 @@ export default function Home() {
               Everything an operations team needs
             </h2>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {FEATURES.map((f) => (
+          <div className="grid gap-5 lg:grid-cols-2">
+            {FEATURES.slice(0, 2).map((f) => (
+              <div
+                key={f.title}
+                className="group rounded-2xl border border-line bg-surface p-8 shadow-card transition-shadow hover:shadow-raised"
+              >
+                <span className="inline-flex size-11 items-center justify-center rounded-xl bg-primary/[0.07] text-primary">
+                  <f.icon className="size-5" strokeWidth={1.8} />
+                </span>
+                <h3 className="mt-5 text-[17px] font-semibold tracking-tight text-ink">
+                  {f.title}
+                </h3>
+                <p className="mt-2 max-w-md text-[14.5px] leading-relaxed text-muted">
+                  {f.text}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.slice(2).map((f) => (
               <div
                 key={f.title}
                 className="group rounded-2xl border border-line bg-surface p-6 shadow-card transition-shadow hover:shadow-raised"
@@ -324,26 +330,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ————— Testimonial ————— */}
-      <section className="border-y border-line/70 bg-surface/60 py-24">
-        <div className="mx-auto max-w-3xl px-6 text-center">
-          <p className="text-2xl leading-snug font-medium tracking-[-0.01em] text-ink md:text-[28px]">
-            “Dispatch replaced a full-time coordinator role. Our account
-            managers describe what they need, approve the plan, and get back
-            to clients. Onboarding that took a day now takes a minute.”
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
-              MK
-            </span>
-            <div className="text-left">
-              <p className="text-sm font-semibold text-ink">Maya Kessler</p>
-              <p className="text-[13px] text-faint">COO, Halcyon Partners</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ————— Pricing ————— */}
       <section id="pricing" className="py-24">
         <div className="mx-auto max-w-6xl px-6">
@@ -390,68 +376,57 @@ export default function Home() {
       {/* ————— Footer ————— */}
       <footer className="border-t border-line bg-surface">
         <div className="mx-auto max-w-6xl px-6 py-16">
-          <div className="grid gap-10 md:grid-cols-5">
-            <div className="md:col-span-2">
+          <div className="grid gap-10 md:grid-cols-3">
+            <div className="md:col-span-2 md:max-w-sm">
               <Logo />
-              <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-muted">
+              <p className="mt-4 text-[13.5px] leading-relaxed text-muted">
                 The AI operations assistant for teams who&apos;d rather
                 describe the work than do it twice.
               </p>
             </div>
-            {[
-              {
-                title: "Product",
-                links: [
-                  "Features",
-                  "Integrations",
-                  "Templates",
-                  "Pricing",
-                  "Changelog",
-                ],
-              },
-              {
-                title: "Company",
-                links: ["About", "Customers", "Careers", "Blog", "Contact"],
-              },
-              {
-                title: "Resources",
-                links: ["Documentation", "API", "Guides", "Status", "Security"],
-              },
-            ].map((col) => (
-              <div key={col.title}>
-                <p className="mb-4 text-[13px] font-semibold text-ink">
-                  {col.title}
-                </p>
-                <ul className="space-y-2.5">
-                  {col.links.map((l) => (
-                    <li key={l}>
-                      <a
-                        href="#"
-                        className="text-[13.5px] text-muted transition-colors hover:text-ink"
-                      >
-                        {l}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <div className="grid grid-cols-2 gap-10">
+              {[
+                {
+                  title: "Product",
+                  links: [
+                    { label: "How it works", href: "#product" },
+                    { label: "Integrations", href: "#integrations" },
+                    { label: "Templates", href: "#templates" },
+                    { label: "Pricing", href: "#pricing" },
+                  ],
+                },
+                {
+                  title: "Legal",
+                  links: [
+                    { label: "Privacy", href: "#" },
+                    { label: "Terms", href: "#" },
+                  ],
+                },
+              ].map((col) => (
+                <div key={col.title}>
+                  <p className="mb-4 text-[13px] font-semibold text-ink">
+                    {col.title}
+                  </p>
+                  <ul className="space-y-2.5">
+                    {col.links.map((l) => (
+                      <li key={l.label}>
+                        <a
+                          href={l.href}
+                          className="text-[13.5px] text-muted transition-colors hover:text-ink"
+                        >
+                          {l.label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-7">
+          <div className="mt-14 border-t border-line pt-7">
             <p className="text-[13px] text-faint">
               © 2026 Dispatch Labs, Inc. All rights reserved.
             </p>
-            <div className="flex items-center gap-6 text-[13px] text-faint">
-              <a href="#" className="hover:text-ink">
-                Privacy
-              </a>
-              <a href="#" className="hover:text-ink">
-                Terms
-              </a>
-              <a href="#" className="hover:text-ink">
-                DPA
-              </a>
-            </div>
           </div>
         </div>
       </footer>
