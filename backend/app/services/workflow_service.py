@@ -1,12 +1,3 @@
-"""Turning a picked action + structured params into a real workflow, and
-running it (simulated — no real third-party API calls yet).
-
-``ACTION_REGISTRY`` is the "AI plan adapter" for this slice: instead of
-parsing free text, it maps an already-known action type and already-validated
-params straight to a plan. Swapping in real NLP later means adding a new
-adapter that also produces this shape, not rearchitecting anything here.
-"""
-
 from __future__ import annotations
 
 import hashlib
@@ -59,12 +50,20 @@ class ActionSpec:
 
 
 ACTION_REGISTRY: dict[str, ActionSpec] = {
-    "send_email": ActionSpec("Send an email", IntegrationProvider.GMAIL, SendEmailParams),
+    "send_email": ActionSpec(
+        "Send an email",
+        IntegrationProvider.GMAIL,
+        SendEmailParams,
+    ),
     "create_calendar_event": ActionSpec(
-        "Create a calendar event", IntegrationProvider.GOOGLE_CALENDAR, CreateCalendarEventParams
+        "Create a calendar event",
+        IntegrationProvider.GOOGLE_CALENDAR,
+        CreateCalendarEventParams,
     ),
     "create_notion_page": ActionSpec(
-        "Create a Notion page", IntegrationProvider.NOTION, CreateNotionPageParams
+        "Create a Notion page",
+        IntegrationProvider.NOTION,
+        CreateNotionPageParams,
     ),
 }
 
@@ -94,12 +93,22 @@ class WorkflowService:
         self._events = WorkflowEventRepository(session)
         self._memberships = MembershipRepository(session)
 
+    @staticmethod
+    def _utc_now() -> datetime:
+        return datetime.now(UTC).replace(tzinfo=None)
+
     async def create(
-        self, user: User, *, action_type: str, raw_params: dict
+        self,
+        user: User,
+        *,
+        action_type: str,
+        raw_params: dict,
     ) -> tuple[Workflow, WorkflowVersion, list[WorkflowStep]]:
         spec = ACTION_REGISTRY.get(action_type)
+
         if spec is None:
             raise UnknownActionTypeError(action_type)
+
         try:
             params = spec.params_model.model_validate(raw_params)
         except ValidationError as exc:
@@ -107,29 +116,48 @@ class WorkflowService:
 
         organization_id = await self._organization_id_for(user)
         params_dict = params.model_dump(mode="json")
+
         plan = {
             "steps": [
-                {"action_type": action_type, "provider": spec.provider.value, "params": params_dict}
+                {
+                    "action_type": action_type,
+                    "provider": spec.provider.value,
+                    "params": params_dict,
+                }
             ]
         }
-        plan_hash = hashlib.sha256(json.dumps(plan, sort_keys=True).encode("utf-8")).hexdigest()
+
+        plan_hash = hashlib.sha256(
+            json.dumps(plan, sort_keys=True).encode("utf-8")
+        ).hexdigest()
 
         workflow = await self._workflows.create_workflow(
-            organization_id=organization_id, owner_user_id=user.id, title=spec.label
+            organization_id=organization_id,
+            owner_user_id=user.id,
+            title=spec.label,
         )
+
         version = await self._workflows.create_version(
             workflow_id=workflow.id,
             prompt=spec.label,
             plan=plan,
             plan_hash=plan_hash,
-            steps=[{"action_type": action_type, "provider": spec.provider, "params": params_dict}],
+            steps=[
+                {
+                    "action_type": action_type,
+                    "provider": spec.provider,
+                    "params": params_dict,
+                }
+            ],
         )
+
         await self._events.record(
             organization_id=organization_id,
             workflow_id=workflow.id,
             event_type=WorkflowEventType.WORKFLOW_CREATED,
             actor_user_id=user.id,
         )
+
         await self._events.record(
             organization_id=organization_id,
             workflow_id=workflow.id,
@@ -137,32 +165,53 @@ class WorkflowService:
             event_type=WorkflowEventType.WORKFLOW_VERSION_CREATED,
             actor_user_id=user.id,
         )
+
         return workflow, version, version.steps
 
     async def list_for_user(self, user: User) -> list[Workflow]:
         organization_id = await self._organization_id_for(user)
-        workflows, _ = await self._workflows.list_for_organization(organization_id)
+        workflows, _ = await self._workflows.list_for_organization(
+            organization_id
+        )
         return workflows
 
     async def get_for_user(
-        self, user: User, workflow_id: uuid.UUID
+        self,
+        user: User,
+        workflow_id: uuid.UUID,
     ) -> tuple[Workflow, WorkflowVersion]:
         organization_id = await self._organization_id_for(user)
+
         workflow = await self._workflows.get_by_id(workflow_id)
+
         if (
             workflow is None
             or workflow.organization_id != organization_id
             or workflow.current_version_id is None
         ):
             raise WorkflowNotFoundError(workflow_id)
-        version = await self._workflows.get_version(workflow.current_version_id)
+
+        version = await self._workflows.get_version(
+            workflow.current_version_id
+        )
+
         if version is None:
             raise WorkflowNotFoundError(workflow_id)
+
         return workflow, version
 
-    async def approve(self, user: User, workflow_id: uuid.UUID) -> tuple[Workflow, WorkflowVersion]:
+    async def approve(
+        self,
+        user: User,
+        workflow_id: uuid.UUID,
+    ) -> tuple[Workflow, WorkflowVersion]:
         workflow, version = await self.get_for_user(user, workflow_id)
-        version = await self._workflows.approve_version(version.id, approved_by_user_id=user.id)
+
+        version = await self._workflows.approve_version(
+            version.id,
+            approved_by_user_id=user.id,
+        )
+
         await self._events.record(
             organization_id=workflow.organization_id,
             workflow_id=workflow.id,
@@ -170,12 +219,16 @@ class WorkflowService:
             event_type=WorkflowEventType.WORKFLOW_APPROVED,
             actor_user_id=user.id,
         )
+
         return workflow, version
 
     async def execute(
-        self, user: User, workflow_id: uuid.UUID
+        self,
+        user: User,
+        workflow_id: uuid.UUID,
     ) -> tuple[Execution, list[WorkflowStep]]:
         workflow, version = await self.get_for_user(user, workflow_id)
+
         if version.status != WorkflowVersionStatus.APPROVED:
             raise WorkflowNotApprovedError(workflow_id)
 
@@ -186,7 +239,9 @@ class WorkflowService:
             triggered_by_user_id=user.id,
             workflow_step_ids=[step.id for step in version.steps],
         )
-        started_at = datetime.now(UTC)
+
+        started_at = self._utc_now()
+
         await self._events.record(
             organization_id=workflow.organization_id,
             workflow_id=workflow.id,
@@ -194,12 +249,20 @@ class WorkflowService:
             event_type=WorkflowEventType.EXECUTION_STARTED,
             actor_user_id=user.id,
         )
+
         await self._executions.update_status(
-            execution.id, ExecutionStatus.RUNNING, started_at=started_at
+            execution.id,
+            ExecutionStatus.RUNNING,
+            started_at=started_at,
         )
 
-        for exec_step, workflow_step in zip(execution.steps, version.steps, strict=True):
+        for exec_step, workflow_step in zip(
+            execution.steps,
+            version.steps,
+            strict=True,
+        ):
             spec = ACTION_REGISTRY[workflow_step.action_type]
+
             await self._events.record(
                 organization_id=workflow.organization_id,
                 workflow_id=workflow.id,
@@ -208,9 +271,13 @@ class WorkflowService:
                 event_type=WorkflowEventType.STEP_STARTED,
                 actor_user_id=user.id,
             )
+
             await self._executions.update_step(
-                exec_step.id, status=StepStatus.RUNNING, started_at=datetime.now(UTC)
+                exec_step.id,
+                status=StepStatus.RUNNING,
+                started_at=self._utc_now(),
             )
+
             result = {
                 "simulated": True,
                 "message": (
@@ -218,12 +285,14 @@ class WorkflowService:
                     f"{spec.provider.value} connection yet)"
                 ),
             }
+
             await self._executions.update_step(
                 exec_step.id,
                 status=StepStatus.SUCCESS,
                 result=result,
-                completed_at=datetime.now(UTC),
+                completed_at=self._utc_now(),
             )
+
             await self._events.record(
                 organization_id=workflow.organization_id,
                 workflow_id=workflow.id,
@@ -233,19 +302,26 @@ class WorkflowService:
                 actor_user_id=user.id,
             )
 
-        completed_at = datetime.now(UTC)
+        completed_at = self._utc_now()
+
         await self._executions.update_status(
-            execution.id, ExecutionStatus.SUCCESS, completed_at=completed_at
+            execution.id,
+            ExecutionStatus.SUCCESS,
+            completed_at=completed_at,
         )
+
         await self._executions.record_metrics(
             execution.id,
-            total_duration_ms=int((completed_at - started_at).total_seconds() * 1000),
+            total_duration_ms=int(
+                (completed_at - started_at).total_seconds() * 1000
+            ),
             step_count=len(version.steps),
             succeeded_step_count=len(version.steps),
             failed_step_count=0,
             skipped_step_count=0,
             retry_count=0,
         )
+
         await self._events.record(
             organization_id=workflow.organization_id,
             workflow_id=workflow.id,
@@ -253,12 +329,20 @@ class WorkflowService:
             event_type=WorkflowEventType.EXECUTION_COMPLETED,
             actor_user_id=user.id,
         )
+
         refreshed = await self._executions.get_by_id(execution.id)
+
         assert refreshed is not None
+
         return refreshed, version.steps
 
-    async def _organization_id_for(self, user: User) -> uuid.UUID:
+    async def _organization_id_for(
+        self,
+        user: User,
+    ) -> uuid.UUID:
         membership = await self._memberships.get_for_user(user.id)
+
         if membership is None:
             raise WorkflowNotFoundError(user.id)
+
         return membership.organization_id

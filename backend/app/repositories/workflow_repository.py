@@ -9,7 +9,7 @@ approved version can never be approved again.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TypedDict
 
 from sqlalchemy import func, select
