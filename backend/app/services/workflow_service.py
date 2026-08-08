@@ -127,9 +127,7 @@ class WorkflowService:
             ]
         }
 
-        plan_hash = hashlib.sha256(
-            json.dumps(plan, sort_keys=True).encode("utf-8")
-        ).hexdigest()
+        plan_hash = hashlib.sha256(json.dumps(plan, sort_keys=True).encode("utf-8")).hexdigest()
 
         workflow = await self._workflows.create_workflow(
             organization_id=organization_id,
@@ -170,9 +168,7 @@ class WorkflowService:
 
     async def list_for_user(self, user: User) -> list[Workflow]:
         organization_id = await self._organization_id_for(user)
-        workflows, _ = await self._workflows.list_for_organization(
-            organization_id
-        )
+        workflows, _ = await self._workflows.list_for_organization(organization_id)
         return workflows
 
     async def get_for_user(
@@ -191,9 +187,7 @@ class WorkflowService:
         ):
             raise WorkflowNotFoundError(workflow_id)
 
-        version = await self._workflows.get_version(
-            workflow.current_version_id
-        )
+        version = await self._workflows.get_version(workflow.current_version_id)
 
         if version is None:
             raise WorkflowNotFoundError(workflow_id)
@@ -312,9 +306,7 @@ class WorkflowService:
 
         await self._executions.record_metrics(
             execution.id,
-            total_duration_ms=int(
-                (completed_at - started_at).total_seconds() * 1000
-            ),
+            total_duration_ms=int((completed_at - started_at).total_seconds() * 1000),
             step_count=len(version.steps),
             succeeded_step_count=len(version.steps),
             failed_step_count=0,
