@@ -9,7 +9,7 @@ approved version can never be approved again.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import TypedDict
 
 from sqlalchemy import func, select
@@ -137,7 +137,7 @@ class WorkflowRepository:
             raise VersionAlreadyApprovedError(version_id)
 
         version.status = WorkflowVersionStatus.APPROVED
-        version.approved_at = datetime.now(UTC)
+        version.approved_at = datetime.now(UTC).replace(tzinfo=None)
         version.approved_by_user_id = approved_by_user_id
         await self._session.flush()
         return version
