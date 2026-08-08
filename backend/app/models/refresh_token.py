@@ -12,7 +12,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, CreatedAtMixin, UUIDPrimaryKeyMixin
@@ -25,8 +25,8 @@ class RefreshToken(Base, UUIDPrimaryKeyMixin, CreatedAtMixin):
         ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     token_hash: Mapped[str] = mapped_column(String(128), unique=True, index=True)
-    expires_at: Mapped[datetime]
-    revoked_at: Mapped[datetime | None]
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     replaced_by_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("refresh_tokens.id", ondelete="SET NULL")
     )
