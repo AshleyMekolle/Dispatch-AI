@@ -157,3 +157,50 @@ async def test_execute_after_approval_succeeds(client: AsyncClient) -> None:
     assert len(body["steps"]) == 1
     assert body["steps"][0]["status"] == "SUCCESS"
     assert body["steps"][0]["result"]["simulated"] is True
+
+
+async def test_list_workflows_includes_status_and_action(client: AsyncClient) -> None:
+    headers = await _auth_headers(client)
+    await client.post(
+        "/api/v1/workflows",
+        headers=headers,
+        json={
+            "action_type": "create_notion_page",
+            "params": {"title": "Notes", "content": "Some content."},
+        },
+    )
+    response = await client.get("/api/v1/workflows", headers=headers)
+    assert response.status_code == 200
+    summary = response.json()[0]
+    assert summary["status"] == "DRAFT"
+    assert summary["action_type"] == "create_notion_page"
+    assert summary["provider"] == "NOTION"
+
+
+async def test_list_executions_empty_before_any_run(client: AsyncClient) -> None:
+    headers = await _auth_headers(client)
+    response = await client.get("/api/v1/workflows/executions", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+async def test_list_executions_after_run(client: AsyncClient) -> None:
+    headers = await _auth_headers(client)
+    create = await client.post(
+        "/api/v1/workflows",
+        headers=headers,
+        json={
+            "action_type": "send_email",
+            "params": {"to": "lead@example.com", "subject": "Hi", "body": "Following up."},
+        },
+    )
+    workflow_id = create.json()["id"]
+    await client.post(f"/api/v1/workflows/{workflow_id}/approve", headers=headers)
+    await client.post(f"/api/v1/workflows/{workflow_id}/executions", headers=headers)
+
+    response = await client.get("/api/v1/workflows/executions", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["workflow_id"] == workflow_id
+    assert body[0]["status"] == "SUCCESS"

@@ -19,8 +19,10 @@ WORKDIR /srv
 
 COPY --from=builder /build/dist/*.whl /tmp/
 RUN pip install --no-cache-dir --user /tmp/*.whl && rm /tmp/*.whl
+COPY --chown=dispatch:dispatch alembic.ini ./alembic.ini
+COPY --chown=dispatch:dispatch alembic ./alembic
 
 ENV PATH="/home/dispatch/.local/bin:${PATH}"
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:create_app --factory --host 0.0.0.0 --port 8000"]

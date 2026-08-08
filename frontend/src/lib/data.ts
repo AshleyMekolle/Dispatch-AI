@@ -58,26 +58,3 @@ export const TEMPLATES: Template[] = [
   { name: "Inventory Updates", description: "Sync stock levels across sheets and bases, and notify purchasing when items run low.", apps: ["Google Sheets", "Airtable", "Slack"], steps: 5, runs: 73, category: "Operations" },
 ];
 
-export type ScheduledWorkflow = {
-  name: string;
-  cadence: string;
-  next: string;
-  apps: AppName[];
-};
-
-export const SCHEDULED: ScheduledWorkflow[] = [
-  { name: "Overdue invoice follow-ups", cadence: "Daily · 9:00 AM", next: "Tomorrow, 9:00 AM", apps: ["Stripe", "Gmail"] },
-  { name: "Weekly pipeline report", cadence: "Mondays · 8:00 AM", next: "Mon Jul 20, 8:00 AM", apps: ["HubSpot", "Slack"] },
-  { name: "Contract renewal scan", cadence: "Thursdays · 3:00 PM", next: "Thu Jul 23, 3:00 PM", apps: ["Airtable", "Gmail"] },
-];
-
-export type Suggestion = {
-  text: string;
-  action: string;
-};
-
-export const SUGGESTIONS: Suggestion[] = [
-  { text: "You sent 9 similar follow-up emails this week. Turn them into a reusable workflow?", action: "Create workflow" },
-  { text: "3 HubSpot deals moved to “Closed won” with no onboarding started. Run Client Onboarding?", action: "Review deals" },
-  { text: "Your Friday report took 40 minutes manually last week. Schedule it for Mondays?", action: "Schedule it" },
-];

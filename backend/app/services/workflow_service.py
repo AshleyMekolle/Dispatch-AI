@@ -166,10 +166,34 @@ class WorkflowService:
 
         return workflow, version, version.steps
 
-    async def list_for_user(self, user: User) -> list[Workflow]:
+    async def list_for_user(self, user: User) -> list[tuple[Workflow, WorkflowVersion]]:
         organization_id = await self._organization_id_for(user)
         workflows, _ = await self._workflows.list_for_organization(organization_id)
-        return workflows
+        pairs: list[tuple[Workflow, WorkflowVersion]] = []
+        for workflow in workflows:
+            if workflow.current_version_id is None:
+                continue
+            version = await self._workflows.get_version(workflow.current_version_id)
+            if version is not None:
+                pairs.append((workflow, version))
+        return pairs
+
+    async def list_recent_executions_for_user(
+        self, user: User, *, limit: int = 10
+    ) -> list[tuple[Execution, Workflow]]:
+        organization_id = await self._organization_id_for(user)
+        executions, _ = await self._executions.list_for_organization(organization_id, limit=limit)
+        workflows: dict[uuid.UUID, Workflow] = {}
+        pairs: list[tuple[Execution, Workflow]] = []
+        for execution in executions:
+            workflow = workflows.get(execution.workflow_id)
+            if workflow is None:
+                workflow = await self._workflows.get_by_id(execution.workflow_id)
+                if workflow is None:
+                    continue
+                workflows[execution.workflow_id] = workflow
+            pairs.append((execution, workflow))
+        return pairs
 
     async def get_for_user(
         self,

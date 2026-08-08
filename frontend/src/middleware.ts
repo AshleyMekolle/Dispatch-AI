@@ -23,6 +23,26 @@ function isExpired(token: string): boolean {
   }
 }
 
+function requestHeadersWithRefreshedCookies(
+  request: NextRequest,
+  tokens: { access_token: string; refresh_token: string },
+): Headers {
+  const headers = new Headers(request.headers);
+  const otherCookies = request.cookies
+    .getAll()
+    .filter((c) => c.name !== ACCESS_TOKEN_COOKIE && c.name !== REFRESH_TOKEN_COOKIE)
+    .map((c) => `${c.name}=${c.value}`);
+  headers.set(
+    "cookie",
+    [
+      ...otherCookies,
+      `${ACCESS_TOKEN_COOKIE}=${tokens.access_token}`,
+      `${REFRESH_TOKEN_COOKIE}=${tokens.refresh_token}`,
+    ].join("; "),
+  );
+  return headers;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
@@ -48,7 +68,9 @@ export async function middleware(request: NextRequest) {
       const tokens = await refreshed.json();
       const response = isAuthPage
         ? NextResponse.redirect(new URL("/dashboard", request.url))
-        : NextResponse.next();
+        : NextResponse.next({
+            request: { headers: requestHeadersWithRefreshedCookies(request, tokens) },
+          });
       setSessionCookies(response, tokens);
       return response;
     }

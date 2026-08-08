@@ -53,7 +53,19 @@ class WorkflowOut(BaseModel):
 class WorkflowSummary(BaseModel):
     id: uuid.UUID
     title: str
+    status: WorkflowVersionStatus
+    action_type: str
+    provider: IntegrationProvider
     created_at: datetime
+
+
+class ExecutionSummary(BaseModel):
+    id: uuid.UUID
+    workflow_id: uuid.UUID
+    workflow_title: str
+    status: ExecutionStatus
+    started_at: datetime | None
+    completed_at: datetime | None
 
 
 class ExecutionStepOut(BaseModel):
@@ -131,8 +143,40 @@ async def list_workflows(
     user: User = Depends(get_current_user),
     service: WorkflowService = Depends(get_workflow_service),
 ) -> list[WorkflowSummary]:
-    workflows = await service.list_for_user(user)
-    return [WorkflowSummary(id=w.id, title=w.title, created_at=w.created_at) for w in workflows]
+    pairs = await service.list_for_user(user)
+    summaries = []
+    for workflow, version in pairs:
+        step = version.steps[0] if version.steps else None
+        summaries.append(
+            WorkflowSummary(
+                id=workflow.id,
+                title=workflow.title,
+                status=version.status,
+                action_type=step.action_type if step else "",
+                provider=step.provider if step else IntegrationProvider.GMAIL,
+                created_at=workflow.created_at,
+            )
+        )
+    return summaries
+
+
+@router.get("/executions", response_model=list[ExecutionSummary])
+async def list_executions(
+    user: User = Depends(get_current_user),
+    service: WorkflowService = Depends(get_workflow_service),
+) -> list[ExecutionSummary]:
+    pairs = await service.list_recent_executions_for_user(user)
+    return [
+        ExecutionSummary(
+            id=execution.id,
+            workflow_id=workflow.id,
+            workflow_title=workflow.title,
+            status=execution.status,
+            started_at=execution.started_at,
+            completed_at=execution.completed_at,
+        )
+        for execution, workflow in pairs
+    ]
 
 
 @router.get("/{workflow_id}", response_model=WorkflowOut)

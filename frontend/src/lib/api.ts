@@ -23,7 +23,19 @@ export type Workflow = {
 export type WorkflowSummary = {
   id: string;
   title: string;
+  status: WorkflowStatus;
+  action_type: string;
+  provider: ProviderName;
   created_at: string;
+};
+
+export type ExecutionSummary = {
+  id: string;
+  workflow_id: string;
+  workflow_title: string;
+  status: ExecutionStatus;
+  started_at: string | null;
+  completed_at: string | null;
 };
 
 export type ExecutionStep = {
@@ -67,6 +79,10 @@ export function createWorkflow(
 
 export function listWorkflows(): Promise<WorkflowSummary[]> {
   return request<WorkflowSummary[]>("/workflows");
+}
+
+export function listExecutions(): Promise<ExecutionSummary[]> {
+  return request<ExecutionSummary[]>("/workflows/executions");
 }
 
 export function getWorkflow(id: string): Promise<Workflow> {
