@@ -72,6 +72,13 @@ class Settings(BaseSettings):
         default=["http://localhost:3000"],
         description="Origins allowed to call the API from a browser.",
     )
+    frontend_base_url: str = Field(
+        default="http://localhost:3000",
+        description=(
+            "Base URL of the frontend app. Used to redirect the browser back "
+            "after a provider OAuth flow (e.g. the Gmail connect callback) completes."
+        ),
+    )
 
     # --- Field-level credential encryption ---------------------------------
     # Ordered newest-first. Encryption always uses the first key; decryption
@@ -88,6 +95,26 @@ class Settings(BaseSettings):
     log_json: bool | None = Field(
         default=None,
         description="Force JSON logs. Defaults to True in production, False elsewhere.",
+    )
+
+    # --- Google OAuth (Gmail, Calendar) ------------------------------------
+    # Empty by default: the Gmail connect flow fails fast with a clear error
+    # until these are configured, rather than silently misbehaving.
+    google_oauth_client_id: str = Field(
+        default="",
+        description="OAuth 2.0 client ID from Google Cloud Console.",
+    )
+    google_oauth_client_secret: str = Field(
+        default="",
+        description="OAuth 2.0 client secret from Google Cloud Console. Never logged or returned.",
+    )
+    google_oauth_redirect_uri: str = Field(
+        default="http://localhost:8000/api/v1/connections/gmail/callback",
+        description="Redirect URI registered with Google for the Gmail OAuth flow.",
+    )
+    google_oauth_gmail_scopes: list[str] = Field(
+        default=["openid", "email", "https://www.googleapis.com/auth/gmail.send"],
+        description="OAuth scopes requested when connecting a Gmail account.",
     )
 
     @model_validator(mode="after")

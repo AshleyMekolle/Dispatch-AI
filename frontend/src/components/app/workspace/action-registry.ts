@@ -1,6 +1,10 @@
 import type { AppName } from "@/components/app-icon";
 
-export type ActionType = "send_email" | "create_calendar_event" | "create_notion_page";
+export type ActionType =
+  | "send_email"
+  | "send_bulk_email"
+  | "create_calendar_event"
+  | "create_notion_page";
 
 export type FieldConfig =
   | {
@@ -9,7 +13,10 @@ export type FieldConfig =
       kind: "text" | "email" | "datetime-local";
       placeholder?: string;
     }
-  | { name: string; label: string; kind: "textarea"; placeholder?: string };
+  | { name: string; label: string; kind: "textarea"; placeholder?: string }
+  // Uploads and parses a CSV/XLSX recipient list — handled specially by
+  // ActionForm, not a plain text input.
+  | { name: string; label: string; kind: "recipients"; placeholder?: string };
 
 export type ActionConfig = {
   type: ActionType;
@@ -32,6 +39,26 @@ export const ACTIONS: ActionConfig[] = [
       { name: "body", label: "Message", kind: "textarea" },
     ],
     summarize: (p) => `Send an email to ${p.to ?? "someone"}: "${p.subject ?? "(no subject)"}"`,
+  },
+  {
+    type: "send_bulk_email",
+    label: "Send a bulk email",
+    description: "Personalize and send an email to everyone in an uploaded list.",
+    app: "Gmail",
+    fields: [
+      { name: "recipients", label: "Recipient list", kind: "recipients" },
+      { name: "subject", label: "Subject", kind: "text", placeholder: "Welcome {{name}}" },
+      {
+        name: "body",
+        label: "Message",
+        kind: "textarea",
+        placeholder: "Hi {{name}}, welcome to Dispatch.",
+      },
+    ],
+    summarize: (p) => {
+      const count = Array.isArray(p.recipients) ? p.recipients.length : 0;
+      return `Send a bulk email to ${count} recipient${count === 1 ? "" : "s"}: "${p.subject ?? "(no subject)"}"`;
+    },
   },
   {
     type: "create_calendar_event",

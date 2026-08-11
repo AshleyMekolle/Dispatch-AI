@@ -17,9 +17,10 @@ import { HeroDemo } from "@/components/landing/hero-demo";
 import { TimelineMock } from "@/components/landing/timeline-mock";
 import { Pricing } from "@/components/landing/pricing";
 import { Button } from "@/components/ui";
-import { AppIcon, AppStack } from "@/components/app-icon";
+import { AppIcon } from "@/components/app-icon";
 import { Logo } from "@/components/logo";
-import { ALL_APPS, TEMPLATES } from "@/lib/data";
+import { ACTIONS } from "@/components/app/workspace/action-registry";
+import { ALL_APPS } from "@/lib/data";
 
 const FEATURES = [
   {
@@ -309,20 +310,20 @@ export default function Home() {
             </Button>
           </div>
           <div className="grid gap-5 md:grid-cols-3">
-            {TEMPLATES.slice(0, 6).map((t) => (
+            {ACTIONS.map((action) => (
               <div
-                key={t.name}
+                key={action.type}
                 className="rounded-2xl border border-line bg-surface p-6 shadow-card transition-shadow hover:shadow-raised"
               >
                 <div className="mb-4 flex items-center justify-between">
-                  <AppStack apps={t.apps} />
-                  <span className="text-xs text-faint">{t.steps} steps</span>
+                  <AppIcon app={action.app} size="lg" />
+                  <span className="text-xs text-faint">{action.app}</span>
                 </div>
                 <h3 className="text-[15px] font-semibold tracking-tight text-ink">
-                  {t.name}
+                  {action.label}
                 </h3>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-muted">
-                  {t.description}
+                  {action.description}
                 </p>
               </div>
             ))}

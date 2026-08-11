@@ -1,14 +1,39 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, Circle, Loader2, ShieldCheck } from "lucide-react";
+import { Check, Circle, Loader2, ShieldCheck, X } from "lucide-react";
 import { AppIcon } from "@/components/app-icon";
 import { Badge } from "@/components/ui";
 import type { Execution, Workflow } from "@/lib/api";
-import { actionFor, type ActionType } from "./action-registry";
+import { actionFor, type ActionConfig, type ActionType } from "./action-registry";
 
-export type UiStepStatus = "pending" | "running" | "done";
+export type UiStepStatus = "pending" | "running" | "done" | "failed";
 export type Phase = "picker" | "form" | "review" | "approved" | "running" | "done";
+
+/** A step's result shape depends on whether it ran for real (Gmail) or was
+ * simulated — this reads whichever fields are present instead of assuming
+ * every result has a `.message`.
+ */
+export function summarizeStepResult(
+  action: ActionConfig,
+  params: Record<string, unknown>,
+  result: Record<string, unknown> | null | undefined,
+): string {
+  if (!result) return action.summarize(params);
+  if (typeof result.message === "string") return result.message;
+  if (typeof result.sent === "boolean") {
+    return result.sent ? "Sent successfully." : "Failed to send.";
+  }
+  if (typeof result.total === "number") {
+    const succeeded = Number(result.succeeded ?? 0);
+    const total = Number(result.total ?? 0);
+    const failed = Number(result.failed ?? 0);
+    return failed > 0
+      ? `${succeeded} of ${total} sent · ${failed} failed`
+      : `${succeeded} of ${total} sent successfully.`;
+  }
+  return action.summarize(params);
+}
 
 export function ExecutionPanel({
   phase,
@@ -30,7 +55,9 @@ export function ExecutionPanel({
   onReset: () => void;
 }) {
   const steps = workflow?.steps ?? [];
-  const doneCount = stepStatuses.filter((s) => s === "done").length;
+  const doneCount = stepStatuses.filter((s) => s === "done" || s === "failed").length;
+  const failedCount = stepStatuses.filter((s) => s === "failed").length;
+  const hasFailure = phase === "done" && failedCount > 0;
   const progress = steps.length ? (doneCount / steps.length) * 100 : 0;
 
   return (
@@ -50,7 +77,13 @@ export function ExecutionPanel({
             Running
           </Badge>
         )}
-        {phase === "done" && (
+        {phase === "done" && hasFailure && (
+          <Badge tone="danger">
+            <X className="size-3" strokeWidth={3} />
+            Failed
+          </Badge>
+        )}
+        {phase === "done" && !hasFailure && (
           <Badge tone="success">
             <Check className="size-3" strokeWidth={3} />
             Completed
@@ -60,7 +93,7 @@ export function ExecutionPanel({
 
       <div className="h-0.5 w-full bg-line/60">
         <motion.div
-          className={`h-full ${phase === "done" ? "bg-success" : "bg-primary"}`}
+          className={`h-full ${hasFailure ? "bg-danger" : phase === "done" ? "bg-success" : "bg-primary"}`}
           animate={{ width: `${phase === "running" || phase === "done" ? progress : 0}%` }}
           transition={{ duration: 0.4 }}
         />
@@ -82,7 +115,11 @@ export function ExecutionPanel({
                   key={step.id}
                   layout
                   className={`rounded-xl border bg-surface p-3.5 transition-colors ${
-                    status === "running" ? "border-primary/40 shadow-[0_0_0_3px_rgb(31_77_58/0.07)]" : "border-line"
+                    status === "running"
+                      ? "border-primary/40 shadow-[0_0_0_3px_rgb(31_77_58/0.07)]"
+                      : status === "failed"
+                        ? "border-danger/30"
+                        : "border-line"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -103,12 +140,26 @@ export function ExecutionPanel({
                           <Check className="size-2.5" strokeWidth={3.5} />
                         </motion.span>
                       )}
+                      {status === "failed" && (
+                        <motion.span
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                          className="inline-flex size-[18px] items-center justify-center rounded-full bg-danger text-white"
+                        >
+                          <X className="size-2.5" strokeWidth={3.5} />
+                        </motion.span>
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[13.5px] font-medium text-ink">{action.label}</p>
-                      <p className="mt-0.5 truncate text-xs leading-relaxed text-faint">
-                        {status === "done" && executionStep?.result
-                          ? String(executionStep.result.message ?? action.summarize(step.params))
+                      <p
+                        className={`mt-0.5 truncate text-xs leading-relaxed ${
+                          status === "failed" ? "text-danger" : "text-faint"
+                        }`}
+                      >
+                        {status === "done" || status === "failed"
+                          ? summarizeStepResult(action, step.params, executionStep?.result)
                           : action.summarize(step.params)}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
@@ -116,7 +167,9 @@ export function ExecutionPanel({
                           <AppIcon app={action.app} size="xs" />
                           {action.app}
                         </span>
-                        <span className="text-[11px] text-faint">Simulated</span>
+                        {executionStep?.result?.simulated === true && (
+                          <span className="text-[11px] text-faint">Simulated</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -176,10 +229,17 @@ export function ExecutionPanel({
         )}
         {phase === "done" && (
           <div className="space-y-2.5">
-            <div className="flex items-center justify-center gap-2 rounded-lg border border-success/25 bg-success/[0.07] py-2.5 text-[13px] font-medium text-success">
-              <Check className="size-4" strokeWidth={2.5} />
-              Completed · {steps.length} of {steps.length} actions
-            </div>
+            {hasFailure ? (
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-danger/25 bg-danger/[0.07] py-2.5 text-[13px] font-medium text-danger">
+                <X className="size-4" strokeWidth={2.5} />
+                {steps.length - failedCount} of {steps.length} succeeded · {failedCount} failed
+              </div>
+            ) : (
+              <div className="flex items-center justify-center gap-2 rounded-lg border border-success/25 bg-success/[0.07] py-2.5 text-[13px] font-medium text-success">
+                <Check className="size-4" strokeWidth={2.5} />
+                Completed · {steps.length} of {steps.length} actions
+              </div>
+            )}
             <div className="flex gap-2.5">
               <button
                 onClick={onExecute}

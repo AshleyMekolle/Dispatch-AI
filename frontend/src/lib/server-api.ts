@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import type { ExecutionSummary, WorkflowSummary } from "@/lib/api";
+import type { Connection, ExecutionSummary, WorkflowSummary } from "@/lib/api";
 import { ACCESS_TOKEN_COOKIE, backendUrl } from "@/lib/session";
 
 async function serverRequest<T>(path: string): Promise<T | null> {
@@ -21,4 +21,8 @@ export async function getWorkflowsServer(): Promise<WorkflowSummary[]> {
 
 export async function getExecutionsServer(): Promise<ExecutionSummary[]> {
   return (await serverRequest<ExecutionSummary[]>("/workflows/executions")) ?? [];
+}
+
+export async function getConnectionsServer(): Promise<Connection[]> {
+  return (await serverRequest<Connection[]>("/connections")) ?? [];
 }

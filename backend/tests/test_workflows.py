@@ -138,13 +138,16 @@ async def test_execute_before_approval_conflicts(client: AsyncClient) -> None:
 
 
 async def test_execute_after_approval_succeeds(client: AsyncClient) -> None:
+    # create_notion_page has no real provider wired up yet, so this exercises
+    # the simulated execution path (send_email/send_bulk_email now run for
+    # real through Gmail — see test_gmail_execution.py for those).
     headers = await _auth_headers(client)
     create = await client.post(
         "/api/v1/workflows",
         headers=headers,
         json={
-            "action_type": "send_email",
-            "params": {"to": "lead@example.com", "subject": "Hi", "body": "Following up."},
+            "action_type": "create_notion_page",
+            "params": {"title": "Notes", "content": "Some content."},
         },
     )
     workflow_id = create.json()["id"]
@@ -190,8 +193,8 @@ async def test_list_executions_after_run(client: AsyncClient) -> None:
         "/api/v1/workflows",
         headers=headers,
         json={
-            "action_type": "send_email",
-            "params": {"to": "lead@example.com", "subject": "Hi", "body": "Following up."},
+            "action_type": "create_notion_page",
+            "params": {"title": "Notes", "content": "Some content."},
         },
     )
     workflow_id = create.json()["id"]

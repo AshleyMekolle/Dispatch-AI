@@ -1,23 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ShieldCheck, Sparkles } from "lucide-react";
 import { LogoMark } from "@/components/logo";
-import {
-  approveWorkflow,
-  executeWorkflow,
-  getWorkflow,
-  listWorkflows,
-  type Execution,
-  type Workflow,
-  type WorkflowSummary,
-} from "@/lib/api";
+import { approveWorkflow, executeWorkflow, type Execution, type Workflow } from "@/lib/api";
 import { ActionForm } from "./workspace/action-form";
-import { actionFor, type ActionType } from "./workspace/action-registry";
+import { ACTIONS, actionFor, type ActionType } from "./workspace/action-registry";
 import { ActionPicker } from "./workspace/action-picker";
-import { ConversationList } from "./workspace/conversation-list";
-import { ExecutionPanel, type Phase, type UiStepStatus } from "./workspace/execution-panel";
+import {
+  ExecutionPanel,
+  summarizeStepResult,
+  type Phase,
+  type UiStepStatus,
+} from "./workspace/execution-panel";
+import { GlowOrb } from "./workspace/glow-orb";
 import { PromptBar } from "./workspace/prompt-bar";
 import { TypewriterHeadline } from "./workspace/typewriter-headline";
 
@@ -25,19 +23,21 @@ export function Workspace() {
   const [phase, setPhase] = useState<Phase>("picker");
   const [selectedActionType, setSelectedActionType] = useState<ActionType | null>(null);
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, string> | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, unknown> | null>(null);
   const [execution, setExecution] = useState<Execution | null>(null);
   const [stepStatuses, setStepStatuses] = useState<UiStepStatus[]>([]);
-  const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
   const [approving, setApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const runningRef = useRef(false);
+  const searchParams = useSearchParams();
 
   useEffect(() => {
-    listWorkflows()
-      .then(setWorkflows)
-      .catch(() => undefined);
-  }, []);
+    const requested = searchParams.get("action");
+    if (requested && ACTIONS.some((a) => a.type === requested)) {
+      setSelectedActionType(requested as ActionType);
+      setPhase("form");
+    }
+  }, [searchParams]);
 
   function reset() {
     if (runningRef.current) return;
@@ -55,32 +55,12 @@ export function Workspace() {
     setPhase("form");
   }
 
-  function handleCreated(created: Workflow, values: Record<string, string>) {
+  function handleCreated(created: Workflow, values: Record<string, unknown>) {
     setWorkflow(created);
     setFormValues(values);
     setStepStatuses(created.steps.map(() => "pending"));
     setPhase("review");
     setError(null);
-    listWorkflows()
-      .then(setWorkflows)
-      .catch(() => undefined);
-  }
-
-  async function handleSelectConversation(id: string) {
-    if (runningRef.current) return;
-    try {
-      const selected = await getWorkflow(id);
-      setWorkflow(selected);
-      setFormValues(null);
-      setExecution(null);
-      const firstStepType = selected.steps[0]?.action_type as ActionType | undefined;
-      setSelectedActionType(firstStepType ?? null);
-      setStepStatuses(selected.steps.map(() => "pending"));
-      setPhase(selected.status === "APPROVED" ? "approved" : "review");
-      setError(null);
-    } catch {
-      setError("Couldn't load that automation.");
-    }
   }
 
   async function handleApprove() {
@@ -108,12 +88,15 @@ export function Workspace() {
       const result = await executeWorkflow(workflow.id);
       setExecution(result);
       const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      for (let i = 0; i < workflow.steps.length; i++) {
+      for (let i = 0; i < result.steps.length; i++) {
         setStepStatuses((prev) => prev.map((s, j) => (j === i ? "running" : s)));
-        await sleep(500 + Math.random() * 500);
-        setStepStatuses((prev) => prev.map((s, j) => (j === i ? "done" : s)));
+        await sleep(400 + Math.random() * 400);
+        // Reflect what actually happened (a Gmail send can genuinely fail),
+        // not an assumed success — only truly-simulated actions always pass.
+        const finalStatus: UiStepStatus = result.steps[i].status === "FAILED" ? "failed" : "done";
+        setStepStatuses((prev) => prev.map((s, j) => (j === i ? finalStatus : s)));
       }
-      await sleep(250);
+      await sleep(200);
       setPhase("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Execution failed.");
@@ -130,17 +113,10 @@ export function Workspace() {
 
   return (
     <div className="flex h-full">
-      <ConversationList
-        workflows={workflows}
-        activeId={workflow?.id ?? null}
-        onSelect={handleSelectConversation}
-        onNew={reset}
-      />
-
       {phase === "picker" ? (
-        <div className="quiet-scroll flex min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto bg-surface px-6 py-16">
-          <LogoMark className="size-11" />
-          <div className="mt-6 max-w-xl text-center">
+        <div className="quiet-scroll flex min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto bg-surface px-6 py-12">
+          <GlowOrb />
+          <div className="mt-2 max-w-xl text-center">
             <TypewriterHeadline />
           </div>
           <div className="mt-8 w-full max-w-xl">
@@ -209,19 +185,41 @@ export function Workspace() {
                 )}
 
                 <AnimatePresence>
-                  {phase === "done" && execution && (
+                  {phase === "done" && execution && activeAction && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="flex items-start gap-3"
                     >
                       <LogoMark className="mt-0.5 size-7" />
-                      <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-success/25 bg-success/[0.06] px-4 py-3 text-[14px] leading-relaxed text-ink">
-                        <span className="font-semibold text-success">
-                          Completed {execution.steps.length} of {execution.steps.length} actions.
-                        </span>{" "}
-                        {String(execution.steps[0]?.result?.message ?? "")}
-                      </div>
+                      {(() => {
+                        const succeeded = execution.steps.filter(
+                          (s) => s.status === "SUCCESS",
+                        ).length;
+                        const failed = execution.steps.length - succeeded;
+                        return (
+                          <div
+                            className={`max-w-[85%] rounded-2xl rounded-tl-md border px-4 py-3 text-[14px] leading-relaxed text-ink ${
+                              failed > 0
+                                ? "border-danger/25 bg-danger/[0.06]"
+                                : "border-success/25 bg-success/[0.06]"
+                            }`}
+                          >
+                            <span
+                              className={`font-semibold ${failed > 0 ? "text-danger" : "text-success"}`}
+                            >
+                              {failed > 0
+                                ? `Completed ${succeeded} of ${execution.steps.length} actions — ${failed} failed.`
+                                : `Completed ${execution.steps.length} of ${execution.steps.length} actions.`}
+                            </span>{" "}
+                            {summarizeStepResult(
+                              activeAction,
+                              workflow?.steps[0]?.params ?? {},
+                              execution.steps[0]?.result,
+                            )}
+                          </div>
+                        );
+                      })()}
                     </motion.div>
                   )}
                 </AnimatePresence>

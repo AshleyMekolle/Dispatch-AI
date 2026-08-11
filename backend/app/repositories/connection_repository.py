@@ -43,6 +43,47 @@ class ConnectionRepository:
     async def get_by_id(self, connection_id: uuid.UUID) -> Connection | None:
         return await self._session.get(Connection, connection_id)
 
+    async def update_tokens(
+        self,
+        connection_id: uuid.UUID,
+        *,
+        access_token: str,
+        refresh_token: str | None = None,
+        expires_at: datetime | None = None,
+    ) -> Connection:
+        """Persist a refreshed access token (and, if Google rotated it, a new
+        refresh token) after the integration layer calls the provider's token
+        endpoint. ``refresh_token`` is only overwritten when the provider
+        actually returned a new one — Google's refresh grant often omits it,
+        and the existing stored value is still valid.
+        """
+        connection = await self._session.get(Connection, connection_id)
+        if connection is None:
+            raise ValueError(f"Connection {connection_id} does not exist")
+        connection.access_token = access_token
+        if refresh_token is not None:
+            connection.refresh_token = refresh_token
+        connection.expires_at = expires_at
+        await self._session.flush()
+        return connection
+
+    async def update_profile(
+        self,
+        connection_id: uuid.UUID,
+        *,
+        external_account_email: str | None = None,
+        scopes: list[str] | None = None,
+    ) -> Connection:
+        connection = await self._session.get(Connection, connection_id)
+        if connection is None:
+            raise ValueError(f"Connection {connection_id} does not exist")
+        if external_account_email is not None:
+            connection.external_account_email = external_account_email
+        if scopes is not None:
+            connection.scopes = scopes
+        await self._session.flush()
+        return connection
+
     async def get_for_user_provider(
         self, *, organization_id: uuid.UUID, user_id: uuid.UUID, provider: IntegrationProvider
     ) -> Connection | None:

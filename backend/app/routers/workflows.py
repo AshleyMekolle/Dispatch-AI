@@ -63,6 +63,8 @@ class ExecutionSummary(BaseModel):
     id: uuid.UUID
     workflow_id: uuid.UUID
     workflow_title: str
+    action_type: str
+    provider: IntegrationProvider
     status: ExecutionStatus
     started_at: datetime | None
     completed_at: datetime | None
@@ -165,18 +167,23 @@ async def list_executions(
     user: User = Depends(get_current_user),
     service: WorkflowService = Depends(get_workflow_service),
 ) -> list[ExecutionSummary]:
-    pairs = await service.list_recent_executions_for_user(user)
-    return [
-        ExecutionSummary(
-            id=execution.id,
-            workflow_id=workflow.id,
-            workflow_title=workflow.title,
-            status=execution.status,
-            started_at=execution.started_at,
-            completed_at=execution.completed_at,
+    triples = await service.list_recent_executions_for_user(user)
+    summaries = []
+    for execution, workflow, version in triples:
+        step = version.steps[0] if version.steps else None
+        summaries.append(
+            ExecutionSummary(
+                id=execution.id,
+                workflow_id=workflow.id,
+                workflow_title=workflow.title,
+                action_type=step.action_type if step else "",
+                provider=step.provider if step else IntegrationProvider.GMAIL,
+                status=execution.status,
+                started_at=execution.started_at,
+                completed_at=execution.completed_at,
+            )
         )
-        for execution, workflow in pairs
-    ]
+    return summaries
 
 
 @router.get("/{workflow_id}", response_model=WorkflowOut)

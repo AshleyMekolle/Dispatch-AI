@@ -33,6 +33,8 @@ export type ExecutionSummary = {
   id: string;
   workflow_id: string;
   workflow_title: string;
+  action_type: string;
+  provider: ProviderName;
   status: ExecutionStatus;
   started_at: string | null;
   completed_at: string | null;
@@ -54,6 +56,32 @@ export type Execution = {
   steps: ExecutionStep[];
 };
 
+export type Connection = {
+  id: string;
+  provider: ProviderName;
+  external_account_email: string | null;
+  connected_at: string;
+};
+
+export type NormalizedRecipient = {
+  email: string;
+  variables: Record<string, string>;
+};
+
+export type RecipientRowIssue = {
+  row_number: number;
+  reason: string;
+  email: string | null;
+};
+
+export type RecipientParseResult = {
+  recipients: NormalizedRecipient[];
+  issues: RecipientRowIssue[];
+  total_rows: number;
+  valid_count: number;
+  issue_count: number;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/backend${path}`, {
     ...init,
@@ -64,6 +92,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const message = typeof error?.detail === "string" ? error.detail : "Something went wrong.";
     throw new Error(message);
   }
+  if (response.status === 204) return undefined as T;
   return response.json();
 }
 
@@ -95,4 +124,35 @@ export function approveWorkflow(id: string): Promise<Workflow> {
 
 export function executeWorkflow(id: string): Promise<Execution> {
   return request<Execution>(`/workflows/${id}/executions`, { method: "POST" });
+}
+
+export function listConnections(): Promise<Connection[]> {
+  return request<Connection[]>("/connections");
+}
+
+export async function getGmailAuthorizeUrl(): Promise<string> {
+  const { url } = await request<{ url: string }>("/connections/gmail/authorize");
+  return url;
+}
+
+export function disconnectConnection(id: string): Promise<void> {
+  return request<void>(`/connections/${id}`, { method: "DELETE" });
+}
+
+export async function parseRecipients(file: File): Promise<RecipientParseResult> {
+  const formData = new FormData();
+  formData.append("file", file);
+  // Not routed through request(): FormData bodies need the browser to set
+  // Content-Type itself (with the multipart boundary) — setting it manually
+  // would omit the boundary and the backend couldn't parse the body.
+  const response = await fetch("/api/backend/recipients/parse", {
+    method: "POST",
+    body: formData,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    const message = typeof error?.detail === "string" ? error.detail : "Couldn't read that file.";
+    throw new Error(message);
+  }
+  return response.json();
 }

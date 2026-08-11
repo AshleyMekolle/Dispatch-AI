@@ -3,15 +3,14 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
-from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, EmailStr, Field, ValidationError
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.integrations.registry import get_action_executor
 from app.models.enums import (
     ExecutionStatus,
-    IntegrationProvider,
     StepStatus,
     WorkflowEventType,
     WorkflowVersionStatus,
@@ -23,49 +22,7 @@ from app.repositories.execution_repository import ExecutionRepository
 from app.repositories.organization_repository import MembershipRepository
 from app.repositories.workflow_event_repository import WorkflowEventRepository
 from app.repositories.workflow_repository import WorkflowRepository
-
-
-class SendEmailParams(BaseModel):
-    to: EmailStr
-    subject: str = Field(min_length=1, max_length=300)
-    body: str = Field(min_length=1, max_length=10000)
-
-
-class CreateCalendarEventParams(BaseModel):
-    title: str = Field(min_length=1, max_length=300)
-    start_time: datetime
-    attendees: list[EmailStr] = Field(default_factory=list)
-
-
-class CreateNotionPageParams(BaseModel):
-    title: str = Field(min_length=1, max_length=300)
-    content: str = Field(min_length=1, max_length=10000)
-
-
-@dataclass(frozen=True)
-class ActionSpec:
-    label: str
-    provider: IntegrationProvider
-    params_model: type[BaseModel]
-
-
-ACTION_REGISTRY: dict[str, ActionSpec] = {
-    "send_email": ActionSpec(
-        "Send an email",
-        IntegrationProvider.GMAIL,
-        SendEmailParams,
-    ),
-    "create_calendar_event": ActionSpec(
-        "Create a calendar event",
-        IntegrationProvider.GOOGLE_CALENDAR,
-        CreateCalendarEventParams,
-    ),
-    "create_notion_page": ActionSpec(
-        "Create a Notion page",
-        IntegrationProvider.NOTION,
-        CreateNotionPageParams,
-    ),
-}
+from app.services.action_registry import ACTION_REGISTRY
 
 
 class UnknownActionTypeError(Exception):
@@ -112,7 +69,11 @@ class WorkflowService:
         try:
             params = spec.params_model.model_validate(raw_params)
         except ValidationError as exc:
-            raise InvalidActionParamsError(exc.errors()) from exc
+            # include_context=False: a custom validator's raised ValueError
+            # (e.g. the duplicate-recipient check) otherwise ends up as a raw
+            # exception object inside ctx.error, which the JSON response
+            # encoder can't serialize — turning a 400 into a 500.
+            raise InvalidActionParamsError(exc.errors(include_context=False)) from exc
 
         organization_id = await self._organization_id_for(user)
         params_dict = params.model_dump(mode="json")
@@ -180,11 +141,12 @@ class WorkflowService:
 
     async def list_recent_executions_for_user(
         self, user: User, *, limit: int = 10
-    ) -> list[tuple[Execution, Workflow]]:
+    ) -> list[tuple[Execution, Workflow, WorkflowVersion]]:
         organization_id = await self._organization_id_for(user)
         executions, _ = await self._executions.list_for_organization(organization_id, limit=limit)
         workflows: dict[uuid.UUID, Workflow] = {}
-        pairs: list[tuple[Execution, Workflow]] = []
+        versions: dict[uuid.UUID, WorkflowVersion] = {}
+        triples: list[tuple[Execution, Workflow, WorkflowVersion]] = []
         for execution in executions:
             workflow = workflows.get(execution.workflow_id)
             if workflow is None:
@@ -192,8 +154,16 @@ class WorkflowService:
                 if workflow is None:
                     continue
                 workflows[execution.workflow_id] = workflow
-            pairs.append((execution, workflow))
-        return pairs
+
+            version = versions.get(execution.workflow_version_id)
+            if version is None:
+                version = await self._workflows.get_version(execution.workflow_version_id)
+                if version is None:
+                    continue
+                versions[execution.workflow_version_id] = version
+
+            triples.append((execution, workflow, version))
+        return triples
 
     async def get_for_user(
         self,
@@ -274,6 +244,9 @@ class WorkflowService:
             started_at=started_at,
         )
 
+        succeeded_count = 0
+        failed_count = 0
+
         for exec_step, workflow_step in zip(
             execution.steps,
             version.steps,
@@ -296,18 +269,37 @@ class WorkflowService:
                 started_at=self._utc_now(),
             )
 
-            result = {
-                "simulated": True,
-                "message": (
-                    f"{spec.label} completed (simulated — no real "
-                    f"{spec.provider.value} connection yet)"
-                ),
-            }
+            # A step whose action_type has a real ActionExecutor registered
+            # (Gmail today) runs for real; everything else keeps the
+            # existing simulated behavior unchanged.
+            executor = get_action_executor(workflow_step.action_type, self._session)
+
+            if executor is None:
+                step_succeeded = True
+                result = {
+                    "simulated": True,
+                    "message": (
+                        f"{spec.label} completed (simulated — no real "
+                        f"{spec.provider.value} connection yet)"
+                    ),
+                }
+                error_message = None
+            else:
+                outcome = await executor.execute(
+                    organization_id=workflow.organization_id,
+                    user_id=user.id,
+                    params=workflow_step.params,
+                    previous_result=exec_step.result,
+                )
+                step_succeeded = outcome.succeeded
+                result = outcome.result
+                error_message = outcome.error_message
 
             await self._executions.update_step(
                 exec_step.id,
-                status=StepStatus.SUCCESS,
+                status=StepStatus.SUCCESS if step_succeeded else StepStatus.FAILED,
                 result=result,
+                error_message=error_message,
                 completed_at=self._utc_now(),
             )
 
@@ -316,15 +308,26 @@ class WorkflowService:
                 workflow_id=workflow.id,
                 execution_id=execution.id,
                 execution_step_id=exec_step.id,
-                event_type=WorkflowEventType.STEP_COMPLETED,
+                event_type=(
+                    WorkflowEventType.STEP_COMPLETED
+                    if step_succeeded
+                    else WorkflowEventType.STEP_FAILED
+                ),
                 actor_user_id=user.id,
+                message=None if step_succeeded else error_message,
             )
 
+            if step_succeeded:
+                succeeded_count += 1
+            else:
+                failed_count += 1
+
         completed_at = self._utc_now()
+        final_status = ExecutionStatus.SUCCESS if failed_count == 0 else ExecutionStatus.FAILED
 
         await self._executions.update_status(
             execution.id,
-            ExecutionStatus.SUCCESS,
+            final_status,
             completed_at=completed_at,
         )
 
@@ -332,8 +335,8 @@ class WorkflowService:
             execution.id,
             total_duration_ms=int((completed_at - started_at).total_seconds() * 1000),
             step_count=len(version.steps),
-            succeeded_step_count=len(version.steps),
-            failed_step_count=0,
+            succeeded_step_count=succeeded_count,
+            failed_step_count=failed_count,
             skipped_step_count=0,
             retry_count=0,
         )

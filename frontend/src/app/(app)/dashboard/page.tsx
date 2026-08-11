@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/app/page-header";
 import { ACTIONS } from "@/components/app/workspace/action-registry";
 import { Badge, Button, Card, StatusDot } from "@/components/ui";
 import { AppIcon } from "@/components/app-icon";
-import { ALL_APPS } from "@/lib/data";
 import { getExecutionsServer, getWorkflowsServer } from "@/lib/server-api";
 import { getSession } from "@/lib/session";
 
@@ -55,8 +54,6 @@ export default async function DashboardPage() {
     { label: "Executions run", value: String(executions.length), icon: Zap },
     { label: "Success rate", value: successRate, icon: CheckCircle2 },
   ];
-
-  const connected = ALL_APPS.filter((a) => a.connected);
 
   return (
     <div className="mx-auto max-w-6xl px-8 py-8">
@@ -130,28 +127,22 @@ export default async function DashboardPage() {
           <Card className="p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-[15px] font-semibold tracking-tight text-ink">
-                Connected apps
+                Supported apps
               </h2>
               <Link
                 href="/integrations"
                 className="text-[13px] font-medium text-muted transition-colors hover:text-ink"
               >
-                Manage
+                View
               </Link>
             </div>
             <div className="flex flex-wrap gap-2">
-              {connected.map((a) => (
-                <AppIcon key={a.app} app={a.app} size="md" />
+              {ACTIONS.map((a) => (
+                <AppIcon key={a.type} app={a.app} size="md" />
               ))}
-              <Link
-                href="/integrations"
-                className="inline-flex size-8 items-center justify-center rounded-lg border border-dashed border-line text-faint transition-colors hover:border-faint hover:text-muted"
-              >
-                <Plus className="size-4" />
-              </Link>
             </div>
             <p className="mt-3.5 text-xs text-faint">
-              {connected.length} of {ALL_APPS.length} available apps connected
+              Real connections are coming soon — automations run in simulated mode for now.
             </p>
           </Card>
 

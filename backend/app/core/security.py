@@ -50,6 +50,32 @@ def decode_access_token(token: str, settings: Settings) -> dict[str, Any]:
     return payload
 
 
+def create_oauth_state_token(user_id: uuid.UUID, settings: Settings) -> str:
+    """A short-lived, single-purpose JWT carrying just a user id.
+
+    Google's OAuth redirect lands on our callback as a plain unauthenticated
+    browser GET — there is no bearer token to identify the user from. This
+    signed ``state`` value (round-tripped through Google unmodified) is what
+    lets the callback recover *which* user is completing the connection,
+    while still proving it was this backend that issued the authorize URL.
+    """
+    now = datetime.now(UTC)
+    payload = {
+        "sub": str(user_id),
+        "type": "oauth_state",
+        "iat": now,
+        "exp": now + timedelta(minutes=10),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+
+
+def decode_oauth_state_token(token: str, settings: Settings) -> uuid.UUID:
+    payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+    if payload.get("type") != "oauth_state":
+        raise jwt.InvalidTokenError("Not an oauth state token")
+    return uuid.UUID(payload["sub"])
+
+
 def hash_refresh_token(raw: str) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 

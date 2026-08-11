@@ -1,7 +1,10 @@
 import { PageHeader } from "@/components/app/page-header";
 import { Button, Card, Field, Toggle } from "@/components/ui";
+import { getSession } from "@/lib/session";
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const session = await getSession();
+
   return (
     <div className="mx-auto max-w-3xl px-8 py-8">
       <PageHeader
@@ -11,16 +14,14 @@ export default function SettingsPage() {
 
       <div className="space-y-5">
         <Card className="p-6">
-          <h2 className="mb-5 text-[15px] font-semibold tracking-tight text-ink">
-            Profile
-          </h2>
+          <h2 className="mb-5 text-[15px] font-semibold tracking-tight text-ink">Profile</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Full name" defaultValue="Amara Cole" />
-            <Field label="Role" defaultValue="Operations Lead" />
+            <Field label="Full name" defaultValue={session?.fullName ?? ""} />
+            <Field label="Role" defaultValue={session?.role ?? ""} />
             <div className="sm:col-span-2">
               <Field
                 label="Email"
-                defaultValue="amara@halcyon.co"
+                defaultValue={session?.email ?? ""}
                 hint="Used for sign-in and execution notifications."
               />
             </div>
@@ -28,17 +29,16 @@ export default function SettingsPage() {
         </Card>
 
         <Card className="p-6">
-          <h2 className="mb-5 text-[15px] font-semibold tracking-tight text-ink">
-            Workspace
-          </h2>
+          <h2 className="mb-5 text-[15px] font-semibold tracking-tight text-ink">Workspace</h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Workspace name" defaultValue="Halcyon Partners" />
-            <Field label="Timezone" defaultValue="(GMT−05:00) Eastern Time" />
+            <Field label="Workspace name" defaultValue={session?.organizationName ?? ""} />
+            <Field label="Timezone" defaultValue={Intl.DateTimeFormat().resolvedOptions().timeZone} />
           </div>
           <div className="mt-5 border-t border-line pt-2">
             <Toggle
               label="Require approval for all executions"
               description="Workflows can never run without a human sign-off."
+              defaultOn
             />
             <Toggle
               label="Allow members to create templates"
@@ -55,14 +55,11 @@ export default function SettingsPage() {
             <Toggle
               label="Execution failures"
               description="Get notified immediately when a workflow fails."
-            />
-            <Toggle
-              label="Needs review"
-              description="When Dispatch pauses a workflow for your input."
+              defaultOn
             />
             <Toggle
               label="Weekly digest"
-              description="A Monday summary of hours saved and runs completed."
+              description="A Monday summary of runs completed."
               defaultOn={false}
             />
           </div>
