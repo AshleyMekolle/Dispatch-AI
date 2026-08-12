@@ -216,6 +216,7 @@ export function Workspace() {
                               activeAction,
                               workflow?.steps[0]?.params ?? {},
                               execution.steps[0]?.result,
+                              execution.steps[0]?.error_message,
                             )}
                           </div>
                         );

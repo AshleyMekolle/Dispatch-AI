@@ -18,7 +18,11 @@ export function summarizeStepResult(
   action: ActionConfig,
   params: Record<string, unknown>,
   result: Record<string, unknown> | null | undefined,
+  errorMessage?: string | null,
 ): string {
+  // A step-level error_message (e.g. "No Gmail account is connected") is
+  // more actionable than a generic pass/fail count, so it takes priority.
+  if (errorMessage) return errorMessage;
   if (!result) return action.summarize(params);
   if (typeof result.message === "string") return result.message;
   if (typeof result.sent === "boolean") {
@@ -154,12 +158,17 @@ export function ExecutionPanel({
                     <div className="min-w-0 flex-1">
                       <p className="text-[13.5px] font-medium text-ink">{action.label}</p>
                       <p
-                        className={`mt-0.5 truncate text-xs leading-relaxed ${
-                          status === "failed" ? "text-danger" : "text-faint"
+                        className={`mt-0.5 text-xs leading-relaxed ${
+                          status === "failed" ? "text-danger" : "truncate text-faint"
                         }`}
                       >
                         {status === "done" || status === "failed"
-                          ? summarizeStepResult(action, step.params, executionStep?.result)
+                          ? summarizeStepResult(
+                              action,
+                              step.params,
+                              executionStep?.result,
+                              executionStep?.error_message,
+                            )
                           : action.summarize(step.params)}
                       </p>
                       <div className="mt-2 flex items-center gap-2">

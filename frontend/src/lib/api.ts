@@ -46,6 +46,7 @@ export type ExecutionStep = {
   provider: ProviderName;
   status: ExecutionStepStatus;
   result: Record<string, unknown> | null;
+  error_message: string | null;
 };
 
 export type Execution = {

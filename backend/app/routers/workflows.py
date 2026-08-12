@@ -76,6 +76,7 @@ class ExecutionStepOut(BaseModel):
     provider: IntegrationProvider
     status: StepStatus
     result: dict[str, Any] | None
+    error_message: str | None
 
 
 class ExecutionOut(BaseModel):
@@ -116,6 +117,7 @@ def _execution_step_out(exec_step: ExecutionStep, workflow_step: WorkflowStep) -
         provider=workflow_step.provider,
         status=exec_step.status,
         result=exec_step.result,
+        error_message=exec_step.error_message,
     )
 
 

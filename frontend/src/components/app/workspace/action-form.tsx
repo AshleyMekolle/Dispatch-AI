@@ -28,6 +28,12 @@ export function ActionForm({
   const [parsing, setParsing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Which field a personalization chip inserts into — set on focus so
+  // clicking "{{name}}" lands wherever the person was just typing.
+  const [lastFocusedField, setLastFocusedField] = useState<"subject" | "body">("subject");
+
+  const isBulkEmail = actionType === "send_bulk_email";
+  const availableVariables = uniqueVariableNames(recipients);
 
   async function handleRecipientFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -48,11 +54,19 @@ export function ActionForm({
     }
   }
 
+  function insertVariable(name: string) {
+    setValues((v) => {
+      const current = v[lastFocusedField] ?? "";
+      const separator = current && !current.endsWith(" ") ? " " : "";
+      return { ...v, [lastFocusedField]: `${current}${separator}{{${name}}}` };
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
-    if (actionType === "send_bulk_email" && recipients.length === 0) {
+    if (isBulkEmail && recipients.length === 0) {
       setError("Upload a recipient list first.");
       return;
     }
@@ -60,7 +74,7 @@ export function ActionForm({
     setLoading(true);
     try {
       let params: Record<string, unknown>;
-      if (actionType === "send_bulk_email") {
+      if (isBulkEmail) {
         params = {
           recipients: recipients.map((r) => ({ email: r.email, ...r.variables })),
           subject: values.subject ?? "",
@@ -124,6 +138,27 @@ export function ActionForm({
                   )}
                 </div>
               )}
+              {availableVariables.length > 0 && (
+                <div className="rounded-lg border border-line bg-canvas/40 px-3 py-2.5">
+                  <p className="text-[12px] font-medium text-ink">Personalize each email</p>
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-muted">
+                    Click a column to drop it into the subject or message. Dispatch swaps it
+                    in with that recipient&apos;s own value when it sends.
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {availableVariables.map((name) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => insertVariable(name)}
+                        className="cursor-pointer rounded-full border border-line bg-surface px-2.5 py-1 font-mono text-[11.5px] text-primary transition-colors hover:border-primary/40 hover:bg-primary/[0.06]"
+                      >
+                        {`{{${name}}}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           );
         }
@@ -137,6 +172,7 @@ export function ActionForm({
                 required
                 value={values[field.name] ?? ""}
                 onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
+                onFocus={isBulkEmail ? () => setLastFocusedField("body") : undefined}
               />
             </label>
           );
@@ -150,6 +186,11 @@ export function ActionForm({
             required
             value={values[field.name] ?? ""}
             onChange={(e) => setValues((v) => ({ ...v, [field.name]: e.target.value }))}
+            onFocus={
+              isBulkEmail && field.name === "subject"
+                ? () => setLastFocusedField("subject")
+                : undefined
+            }
           />
         );
       })}
@@ -162,4 +203,12 @@ export function ActionForm({
       </Button>
     </form>
   );
+}
+
+function uniqueVariableNames(recipients: NormalizedRecipient[]): string[] {
+  const seen = new Set<string>();
+  for (const recipient of recipients) {
+    for (const key of Object.keys(recipient.variables)) seen.add(key);
+  }
+  return Array.from(seen);
 }
